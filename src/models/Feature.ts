@@ -13,9 +13,9 @@ export interface AlertThreshold {
 }
 
 export interface AlertSettings {
-	critical?: AlertThreshold;
-	warning?: AlertThreshold;
-	info?: AlertThreshold;
+	critical?: AlertThreshold | null;
+	warning?: AlertThreshold | null;
+	info?: AlertThreshold | null;
 	alert_enabled?: boolean;
 }
 

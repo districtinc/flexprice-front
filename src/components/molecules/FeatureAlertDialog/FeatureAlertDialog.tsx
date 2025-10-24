@@ -5,105 +5,105 @@ import { AlertSettings, AlertThreshold, AlertLevel } from '@/models/Feature';
 
 interface FeatureAlertDialogProps {
 	open: boolean;
-	alertSettings?: AlertSettings; // Made optional
+	alertSettings?: AlertSettings;
 	onSave: (alertSettings: AlertSettings) => void;
 	onClose: () => void;
 }
 
-// Moved outside component to avoid reallocation
-const validateThreshold = (threshold: AlertThreshold | undefined, name: string): boolean => {
-	if (threshold) {
-		if (!threshold.threshold || parseFloat(threshold.threshold) < 0) {
-			toast.error(`Please enter a valid ${name} threshold value`);
-			return false;
-		}
-	}
-	return true;
-};
-
 const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSettings, onSave, onClose }) => {
 	const [localAlertSettings, setLocalAlertSettings] = useState<AlertSettings>({
 		alert_enabled: false,
-		critical: undefined,
-		warning: undefined,
-		info: undefined,
+		critical: null,
+		warning: null,
+		info: null,
 	});
 
-	// Sync local state with props - removed 'open' dependency to prevent re-sync on dialog toggle
+	// Sync local state with props
 	useEffect(() => {
 		if (alertSettings) {
 			setLocalAlertSettings({
 				alert_enabled: alertSettings.alert_enabled || false,
-				critical: alertSettings.critical,
-				warning: alertSettings.warning,
-				info: alertSettings.info,
+				critical: alertSettings.critical || null,
+				warning: alertSettings.warning || null,
+				info: alertSettings.info || null,
 			});
 		} else {
 			setLocalAlertSettings({
 				alert_enabled: false,
-				critical: undefined,
-				warning: undefined,
-				info: undefined,
+				critical: null,
+				warning: null,
+				info: null,
 			});
 		}
 	}, [alertSettings]);
 
+	// Determine the master condition - prioritize critical, then any existing threshold
+	const getMasterCondition = (): 'above' | 'below' | undefined => {
+		if (localAlertSettings.critical) return localAlertSettings.critical.condition;
+		if (localAlertSettings.warning) return localAlertSettings.warning.condition;
+		if (localAlertSettings.info) return localAlertSettings.info.condition;
+		return undefined;
+	};
+
+	// Check if condition selector should be disabled for a given level
+	const isConditionDisabled = (level: AlertLevel): boolean => {
+		const threshold = localAlertSettings[level];
+		if (!threshold) return false;
+
+		// Critical always controls the condition if it exists
+		if (level !== AlertLevel.CRITICAL && localAlertSettings.critical) {
+			return true;
+		}
+
+		// If warning exists and this is info, warning controls (when no critical)
+		if (level === AlertLevel.INFO && localAlertSettings.warning && !localAlertSettings.critical) {
+			return true;
+		}
+
+		// If info exists and this is warning, info controls (when no critical)
+		if (level === AlertLevel.WARNING && localAlertSettings.info && !localAlertSettings.critical) {
+			return true;
+		}
+
+		return false;
+	};
+
 	const handleSave = () => {
-		// Validation
+		// SINGLE VALIDATION: If alerts enabled, at least one threshold must be set with valid values
 		if (localAlertSettings.alert_enabled) {
-			// At least one threshold should be set
-			if (!localAlertSettings.critical && !localAlertSettings.warning && !localAlertSettings.info) {
+			const hasAnyThreshold = localAlertSettings.critical || localAlertSettings.warning || localAlertSettings.info;
+
+			if (!hasAnyThreshold) {
 				toast.error('Please configure at least one threshold level');
 				return;
 			}
 
-			// Validate threshold values using AlertLevel enum
-			if (!validateThreshold(localAlertSettings.critical, AlertLevel.CRITICAL)) return;
-			if (!validateThreshold(localAlertSettings.warning, AlertLevel.WARNING)) return;
-			if (!validateThreshold(localAlertSettings.info, AlertLevel.INFO)) return;
+			// Validate threshold values - only check if they exist and are valid numbers
+			const validateValue = (threshold: AlertThreshold | null | undefined, name: string): boolean => {
+				if (threshold) {
+					const value = parseFloat(threshold.threshold);
+					if (isNaN(value)) {
+						toast.error(`Please enter a valid ${name} threshold value`);
+						return false;
+					}
+				}
+				return true;
+			};
 
-			// Validate threshold ordering for "below" condition
-			if (localAlertSettings.critical?.condition === 'below') {
-				const criticalVal = localAlertSettings.critical ? parseFloat(localAlertSettings.critical.threshold) : null;
-				const warningVal = localAlertSettings.warning ? parseFloat(localAlertSettings.warning.threshold) : null;
-				const infoVal = localAlertSettings.info ? parseFloat(localAlertSettings.info.threshold) : null;
-
-				if (criticalVal !== null && warningVal !== null && criticalVal >= warningVal) {
-					toast.error('For "below" condition: warning threshold must be greater than critical threshold');
-					return;
-				}
-				if (warningVal !== null && infoVal !== null && warningVal >= infoVal) {
-					toast.error('For "below" condition: info threshold must be greater than warning threshold');
-					return;
-				}
-				if (criticalVal !== null && infoVal !== null && criticalVal >= infoVal) {
-					toast.error('For "below" condition: info threshold must be greater than critical threshold');
-					return;
-				}
-			}
-
-			// Validate threshold ordering for "above" condition
-			if (localAlertSettings.critical?.condition === 'above') {
-				const criticalVal = localAlertSettings.critical ? parseFloat(localAlertSettings.critical.threshold) : null;
-				const warningVal = localAlertSettings.warning ? parseFloat(localAlertSettings.warning.threshold) : null;
-				const infoVal = localAlertSettings.info ? parseFloat(localAlertSettings.info.threshold) : null;
-
-				if (criticalVal !== null && warningVal !== null && criticalVal <= warningVal) {
-					toast.error('For "above" condition: critical threshold must be greater than warning threshold');
-					return;
-				}
-				if (warningVal !== null && infoVal !== null && warningVal <= infoVal) {
-					toast.error('For "above" condition: warning threshold must be greater than info threshold');
-					return;
-				}
-				if (criticalVal !== null && infoVal !== null && criticalVal <= infoVal) {
-					toast.error('For "above" condition: critical threshold must be greater than info threshold');
-					return;
-				}
-			}
+			if (!validateValue(localAlertSettings.critical, 'critical')) return;
+			if (!validateValue(localAlertSettings.warning, 'warning')) return;
+			if (!validateValue(localAlertSettings.info, 'info')) return;
 		}
 
-		onSave(localAlertSettings);
+		// COMPLETE OVERWRITE - send exactly what's in the form
+		const settingsToSave: AlertSettings = {
+			alert_enabled: localAlertSettings.alert_enabled,
+			critical: localAlertSettings.critical,
+			warning: localAlertSettings.warning,
+			info: localAlertSettings.info,
+		};
+
+		onSave(settingsToSave);
 	};
 
 	const handleClose = () => {
@@ -111,16 +111,15 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 		if (alertSettings) {
 			setLocalAlertSettings({
 				alert_enabled: alertSettings.alert_enabled || false,
-				critical: alertSettings.critical,
-				warning: alertSettings.warning,
-				info: alertSettings.info,
+				critical: alertSettings.critical || null,
+				warning: alertSettings.warning || null,
+				info: alertSettings.info || null,
 			});
 		}
 		onClose();
 	};
 
 	const handleThresholdChange = (level: AlertLevel, field: 'threshold' | 'condition', value: string) => {
-		// Move state construction logic outside
 		const currentThreshold = localAlertSettings[level] || { threshold: '0', condition: 'below' as const };
 
 		// If condition is being changed, sync all other thresholds to use the same condition
@@ -128,9 +127,9 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 			const newCondition = value as 'above' | 'below';
 			const newState: AlertSettings = {
 				...localAlertSettings,
-				critical: localAlertSettings.critical ? { ...localAlertSettings.critical, condition: newCondition } : undefined,
-				warning: localAlertSettings.warning ? { ...localAlertSettings.warning, condition: newCondition } : undefined,
-				info: localAlertSettings.info ? { ...localAlertSettings.info, condition: newCondition } : undefined,
+				critical: localAlertSettings.critical ? { ...localAlertSettings.critical, condition: newCondition } : null,
+				warning: localAlertSettings.warning ? { ...localAlertSettings.warning, condition: newCondition } : null,
+				info: localAlertSettings.info ? { ...localAlertSettings.info, condition: newCondition } : null,
 			};
 			setLocalAlertSettings(newState);
 		} else {
@@ -148,19 +147,20 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 	const handleRemoveThreshold = (level: AlertLevel) => {
 		const newState: AlertSettings = {
 			...localAlertSettings,
-			[level]: undefined,
+			[level]: null, // Explicitly set to null for removal
 		};
 		setLocalAlertSettings(newState);
 	};
 
 	const handleAddThreshold = (level: AlertLevel) => {
-		const defaultCondition =
-			localAlertSettings.critical?.condition || localAlertSettings.warning?.condition || localAlertSettings.info?.condition || 'below';
+		// Use the master condition (prioritize critical, then any existing)
+		const masterCondition = getMasterCondition() || 'below';
+
 		const newState: AlertSettings = {
 			...localAlertSettings,
 			[level]: {
 				threshold: '0',
-				condition: defaultCondition,
+				condition: masterCondition,
 			},
 		};
 		setLocalAlertSettings(newState);
@@ -168,6 +168,7 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 
 	const renderThresholdInput = (level: AlertLevel, label: string, description: string) => {
 		const threshold = localAlertSettings[level];
+		const conditionDisabled = isConditionDisabled(level);
 
 		return (
 			<div className='space-y-3 p-4 border rounded-lg bg-gray-50'>
@@ -197,7 +198,6 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 								onChange={(value) => handleThresholdChange(level, 'threshold', value)}
 								type='number'
 								step='0.01'
-								min='0'
 							/>
 						</div>
 						<div className='space-y-1'>
@@ -209,6 +209,7 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 								]}
 								value={threshold.condition}
 								onChange={(value) => handleThresholdChange(level, 'condition', value)}
+								disabled={conditionDisabled}
 							/>
 						</div>
 					</div>
@@ -246,8 +247,8 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 					<div className='space-y-4'>
 						<div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md'>
 							<p className='text-xs text-blue-800'>
-								Configure thresholds to monitor usage. Alerts trigger when usage crosses these thresholds. All thresholds must use the same
-								condition (above or below).
+								Configure thresholds to monitor usage. The first threshold added sets the condition for all thresholds. You can remove any
+								threshold at any time.
 							</p>
 						</div>
 
