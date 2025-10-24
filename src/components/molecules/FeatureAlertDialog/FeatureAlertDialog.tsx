@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Input, Toggle, Select } from '@/components/atoms';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { AlertSettings, AlertThreshold, AlertLevel } from '@/models/Feature';
 
 interface FeatureAlertDialogProps {
 	open: boolean;
 	alertSettings?: AlertSettings;
-	onSave: (alertSettings: AlertSettings) => void;
+	onSave: (alertSettings: AlertSettings) => void | Promise<void>;
 	onClose: () => void;
 }
 
@@ -17,6 +17,7 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 		warning: null,
 		info: null,
 	});
+	const [isSaving, setIsSaving] = useState(false);
 
 	// Sync local state with props
 	useEffect(() => {
@@ -68,7 +69,10 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 		return false;
 	};
 
-	const handleSave = () => {
+	const handleSave = async () => {
+		// Prevent double-submit
+		if (isSaving) return;
+
 		// SINGLE VALIDATION: If alerts enabled, at least one threshold must be set with valid values
 		if (localAlertSettings.alert_enabled) {
 			const hasAnyThreshold = localAlertSettings.critical || localAlertSettings.warning || localAlertSettings.info;
@@ -103,10 +107,17 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 			info: localAlertSettings.info,
 		};
 
-		onSave(settingsToSave);
+		try {
+			setIsSaving(true);
+			await onSave(settingsToSave);
+		} finally {
+			setIsSaving(false);
+		}
 	};
 
 	const handleClose = () => {
+		// Prevent closing during save
+		if (isSaving) return;
 		// Reset to original values
 		if (alertSettings) {
 			setLocalAlertSettings({
@@ -178,11 +189,11 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 						<p className='text-xs text-gray-500 mt-0.5'>{description}</p>
 					</div>
 					{threshold ? (
-						<Button variant='ghost' size='sm' onClick={() => handleRemoveThreshold(level)}>
+						<Button variant='ghost' size='sm' onClick={() => handleRemoveThreshold(level)} disabled={isSaving}>
 							Remove
 						</Button>
 					) : (
-						<Button variant='outline' size='sm' onClick={() => handleAddThreshold(level)}>
+						<Button variant='outline' size='sm' onClick={() => handleAddThreshold(level)} disabled={isSaving}>
 							Add
 						</Button>
 					)}
@@ -198,6 +209,7 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 								onChange={(value) => handleThresholdChange(level, 'threshold', value)}
 								type='number'
 								step='0.01'
+								disabled={isSaving}
 							/>
 						</div>
 						<div className='space-y-1'>
@@ -209,7 +221,7 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 								]}
 								value={threshold.condition}
 								onChange={(value) => handleThresholdChange(level, 'condition', value)}
-								disabled={conditionDisabled}
+								disabled={conditionDisabled || isSaving}
 							/>
 						</div>
 					</div>
@@ -240,6 +252,7 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 					description='Get notified when usage crosses configured thresholds for this feature'
 					checked={localAlertSettings.alert_enabled || false}
 					onChange={handleToggleChange}
+					disabled={isSaving}
 				/>
 
 				{/* Alert Configuration */}
@@ -260,10 +273,12 @@ const FeatureAlertDialog: React.FC<FeatureAlertDialogProps> = ({ open, alertSett
 
 				{/* Action Buttons */}
 				<div className='flex justify-end gap-2 mt-6'>
-					<Button variant='outline' onClick={handleClose}>
+					<Button variant='outline' onClick={handleClose} disabled={isSaving}>
 						Cancel
 					</Button>
-					<Button onClick={handleSave}>Save Changes</Button>
+					<Button onClick={handleSave} disabled={isSaving}>
+						{isSaving ? 'Saving...' : 'Save Changes'}
+					</Button>
 				</div>
 			</div>
 		</Dialog>
