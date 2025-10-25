@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumbsStore } from '@/store/useBreadcrumbsStore';
-import { Card, Loader, FeatureMultiSelect, Input, Button, DateTimePicker, Select } from '@/components/atoms';
+import { Card, Loader, FeatureMultiSelect, Input, Button, DateTimePicker, Select, FormHeader } from '@/components/atoms';
 import CustomerApi from '@/api/CustomerApi';
 import toast from 'react-hot-toast';
 import EventsApi from '@/api/EventsApi';
@@ -11,6 +11,9 @@ import { RefreshCw } from 'lucide-react';
 import { GetUsageAnalyticsRequest } from '@/types/dto';
 import { WindowSize } from '@/models';
 import CustomerUsageChart from '@/components/molecules/CustomerUsageChart';
+import FlexpriceTable, { ColumnData } from '@/components/molecules/Table';
+import { UsageAnalyticItem } from '@/models/Analytics';
+import { formatNumber } from '@/utils/common';
 
 const windowSizeOptions = [
 	{ label: 'Minute', value: WindowSize.MINUTE },
@@ -237,7 +240,71 @@ const CustomerUsageTab = () => {
 					)}
 				</div>
 			</Card>
+
+			{/* Usage Data Table */}
+			{usageData && (
+				<div className='mt-6 '>
+					<UsageDataTable items={usageData.items} />
+				</div>
+			)}
 		</div>
+	);
+};
+
+const UsageDataTable: React.FC<{ items: UsageAnalyticItem[] }> = ({ items }) => {
+	// Define table columns
+	const columns: ColumnData<UsageAnalyticItem>[] = [
+		{
+			title: 'Name',
+			render: (row: UsageAnalyticItem) => {
+				return <span>{row.name || row.name || 'Unknown'}</span>;
+			},
+		},
+		{
+			title: 'Source',
+			render: (row: UsageAnalyticItem) => row.source || '-',
+		},
+		{
+			title: 'Total Usage',
+			render: (row: UsageAnalyticItem) => {
+				const unit = row.unit ? ` ${row.unit}${row.total_usage !== 1 && row.unit_plural ? 's' : ''}` : '';
+				return (
+					<span>
+						{formatNumber(row.total_usage)}
+						{unit}
+					</span>
+				);
+			},
+		},
+		{
+			title: 'Total Cost',
+			render: (row: UsageAnalyticItem) => {
+				if (row.total_cost === 0 || !row.currency) return '-';
+				return (
+					<span>
+						{formatNumber(row.total_cost, 2)} {row.currency}
+					</span>
+				);
+			},
+		},
+		{
+			title: 'Events',
+			render: (row: UsageAnalyticItem) => formatNumber(row.event_count),
+		},
+	];
+
+	// Prepare data for the table
+	const tableData = items.map((item) => ({
+		...item,
+		// Ensure we have all required fields for the table
+		id: item.feature_id || item.source || 'unknown',
+	}));
+
+	return (
+		<>
+			<h1 className='text-lg font-medium text-gray-900 mb-4'>Usage Breakdown</h1>
+			<FlexpriceTable columns={columns} data={tableData} showEmptyRow />
+		</>
 	);
 };
 
