@@ -31,10 +31,10 @@ import { ENTITY_STATUS } from '@/models/base';
 import { EntitlementResponse } from '@/types/dto';
 import { METER_AGGREGATION_TYPE } from '@/models/Meter';
 import { Price } from '@/models/Price';
-import ChargeValueCell from '@/pages/product-catalog/plans/ChargeValueCell';
 import { PriceApi } from '@/api/PriceApi';
 import { formatBillingPeriodForDisplay, getPriceTypeLabel } from '@/utils/common/helper_functions';
-import { formatInvoiceCadence } from '@/pages/product-catalog/plans/PlanDetailsPage';
+import { ChargeValueCell } from '@/components/molecules';
+import { formatInvoiceCadence } from '@/pages';
 
 export const formatAggregationType = (data: string): string => {
 	const aggregationTypeMap: Record<string, string> = {

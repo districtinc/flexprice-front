@@ -1,5 +1,7 @@
 export { Sidebar } from './Sidebar';
 
+export { ChargeValueCell } from './ChargeValueCell';
+
 export {
 	Table,
 	TableHeader,
