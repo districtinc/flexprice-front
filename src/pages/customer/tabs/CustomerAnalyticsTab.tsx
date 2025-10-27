@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumbsStore } from '@/store/useBreadcrumbsStore';
-import { Card, Loader, FeatureMultiSelect, DateRangePicker } from '@/components/atoms';
+import { Loader, FeatureMultiSelect, DateRangePicker } from '@/components/atoms';
 import CustomerApi from '@/api/CustomerApi';
 import toast from 'react-hot-toast';
 import EventsApi from '@/api/EventsApi';
@@ -204,92 +204,68 @@ const CustomerAnalyticsTab = () => {
 				/>
 			</div>
 
-			{/* Summary Metrics - Revenue tiles */}
-			<div className='pt-9'>
-				{isLoading ? (
-					<div className='flex items-center justify-center py-12'>
-						<Loader />
-					</div>
-				) : (
-					costData &&
-					(() => {
-						const totalRevenue = parseFloat(costData.total_revenue || '0');
-						const totalCost = parseFloat(costData.total_cost || '0');
-						const margin = parseFloat(costData.margin || '0');
-						const marginPercent = parseFloat(costData.margin_percent || '0');
-
-						return (
-							<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-								<MetricCard title='Revenue' value={totalRevenue} currency={costData.currency} />
-								<MetricCard title='Cost' value={totalCost} currency={costData.currency} />
-								<MetricCard title='Margin' value={margin} currency={costData.currency} showChangeIndicator={true} isNegative={margin < 0} />
-								<MetricCard
-									title='Margin %'
-									value={marginPercent}
-									isPercent={true}
-									showChangeIndicator={true}
-									isNegative={marginPercent < 0}
-								/>
-							</div>
-						);
-					})()
-				)}
-			</div>
-
-			{/* Usage Chart */}
+			{/* Single Loader at Page Level */}
 			{isLoading ? (
 				<div className='flex items-center justify-center py-12'>
 					<Loader />
 				</div>
 			) : (
-				usageData && (
-					<div className=''>
-						<CustomerUsageChart data={usageData} />
-					</div>
-				)
-			)}
+				<>
+					{/* Summary Metrics - Revenue tiles */}
+					{costData && (
+						<div className='pt-9'>
+							{(() => {
+								const totalRevenue = parseFloat(costData.total_revenue || '0');
+								const totalCost = parseFloat(costData.total_cost || '0');
+								const margin = parseFloat(costData.margin || '0');
+								const marginPercent = parseFloat(costData.margin_percent || '0');
 
-			{/* Usage Data Table */}
-			{isLoading ? (
-				<div className='mt-6'>
-					<h1 className='text-lg font-medium text-gray-900 mb-4'>Usage Breakdown</h1>
-					<Card>
-						<div className='p-12'>
-							<div className='flex items-center justify-center'>
-								<Loader />
-							</div>
+								return (
+									<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+										<MetricCard title='Revenue' value={totalRevenue} currency={costData.currency} />
+										<MetricCard title='Cost' value={totalCost} currency={costData.currency} />
+										<MetricCard
+											title='Margin'
+											value={margin}
+											currency={costData.currency}
+											showChangeIndicator={true}
+											isNegative={margin < 0}
+										/>
+										<MetricCard
+											title='Margin %'
+											value={marginPercent}
+											isPercent={true}
+											showChangeIndicator={true}
+											isNegative={marginPercent < 0}
+										/>
+									</div>
+								);
+							})()}
 						</div>
-					</Card>
-				</div>
-			) : (
-				usageData && (
-					<div className='!mt-10'>
-						<UsageDataTable items={usageData.items} />
-					</div>
-				)
-			)}
+					)}
 
-			{/* Cost Data Table */}
-			<div className='pt-9'>
-				{isLoading ? (
-					<div className='mt-6'>
-						<h1 className='text-lg font-medium text-gray-900 mb-4'>Cost Breakdown</h1>
-						<Card>
-							<div className='p-12'>
-								<div className='flex items-center justify-center'>
-									<Loader />
-								</div>
-							</div>
-						</Card>
-					</div>
-				) : (
-					costData && (
+					{/* Usage Chart */}
+					{usageData && (
 						<div className=''>
+							<CustomerUsageChart data={usageData} />
+						</div>
+					)}
+
+					{/* Usage Data Table */}
+					{usageData && (
+						<div className='!mt-10'>
+							<UsageDataTable items={usageData.items} />
+						</div>
+					)}
+
+					{/* Cost Data Table */}
+					{costData && (
+						<div className='pt-9'>
 							<CostDataTable items={costData.cost_analytics} />
 						</div>
-					)
-				)}
-			</div>
+					)}
+				</>
+			)}
 		</div>
 	);
 };

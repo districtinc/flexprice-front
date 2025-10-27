@@ -4,8 +4,8 @@
  * @param decimals Number of decimal places (default: 0)
  * @returns Formatted number string
  */
-const formatNumber = (value: number | null | undefined, decimals: number = 0): string => {
-	if (value === undefined || value === null || !Number.isFinite(value)) return '-';
+const formatNumber = (value: number, decimals: number = 0): string => {
+	if (!value) return '-';
 
 	// Clamp decimals to valid range (0-20)
 	const clampedDecimals = Math.max(0, Math.min(20, decimals));

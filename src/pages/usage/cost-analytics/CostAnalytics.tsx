@@ -1,10 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumbsStore } from '@/store/useBreadcrumbsStore';
-import { Page, Card, Input, DateRangePicker, FeatureMultiSelect } from '@/components/atoms';
+import { Page, Input, DateRangePicker, FeatureMultiSelect, Loader } from '@/components/atoms';
 import CostSheetApi from '@/api/CostSheetApi';
 import toast from 'react-hot-toast';
-import { Loader } from 'lucide-react';
 import { GetCostAnalyticsRequest } from '@/types/dto/Cost';
 import Feature from '@/models/Feature';
 import { ApiDocsContent, MetricCard } from '@/components/molecules';
@@ -124,65 +123,52 @@ const CostAnalyticsPage: React.FC = () => {
 					</div>
 				</div>
 
-				{/* Summary Metrics */}
-				<div className='pt-9'>
-					{costLoading ? (
-						<div className='flex items-center justify-center py-12'>
-							<Loader />
-						</div>
-					) : (
-						costData &&
-						(() => {
-							const totalRevenue = parseFloat(costData.total_revenue || '0');
-							const totalCost = parseFloat(costData.total_cost || '0');
-							const margin = parseFloat(costData.margin || '0');
-							const marginPercent = parseFloat(costData.margin_percent || '0');
+				{/* Single Loader at Page Level */}
+				{costLoading ? (
+					<div className='flex items-center justify-center py-12'>
+						<Loader />
+					</div>
+				) : (
+					costData && (
+						<>
+							{/* Summary Metrics */}
+							<div className='pt-9'>
+								{(() => {
+									const totalRevenue = parseFloat(costData.total_revenue || '0');
+									const totalCost = parseFloat(costData.total_cost || '0');
+									const margin = parseFloat(costData.margin || '0');
+									const marginPercent = parseFloat(costData.margin_percent || '0');
 
-							return (
-								<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-									<MetricCard title='Revenue' value={totalRevenue} currency={costData.currency} />
-									<MetricCard title='Cost' value={totalCost} currency={costData.currency} />
-									<MetricCard
-										title='Margin'
-										value={margin}
-										currency={costData.currency}
-										showChangeIndicator={true}
-										isNegative={margin < 0}
-									/>
-									<MetricCard
-										title='Margin %'
-										value={marginPercent}
-										isPercent={true}
-										showChangeIndicator={true}
-										isNegative={marginPercent < 0}
-									/>
-								</div>
-							);
-						})()
-					)}
-				</div>
+									return (
+										<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+											<MetricCard title='Revenue' value={totalRevenue} currency={costData.currency} />
+											<MetricCard title='Cost' value={totalCost} currency={costData.currency} />
+											<MetricCard
+												title='Margin'
+												value={margin}
+												currency={costData.currency}
+												showChangeIndicator={true}
+												isNegative={margin < 0}
+											/>
+											<MetricCard
+												title='Margin %'
+												value={marginPercent}
+												isPercent={true}
+												showChangeIndicator={true}
+												isNegative={marginPercent < 0}
+											/>
+										</div>
+									);
+								})()}
+							</div>
 
-				{/* Cost Data Table */}
-				<div className='pt-9'>
-					{costLoading ? (
-						<div className='mt-6'>
-							<h1 className='text-lg font-medium text-gray-900 mb-4'>Cost Breakdown</h1>
-							<Card>
-								<div className='p-12'>
-									<div className='flex items-center justify-center'>
-										<Loader />
-									</div>
-								</div>
-							</Card>
-						</div>
-					) : (
-						costData && (
-							<div className='mt-6'>
+							{/* Cost Data Table */}
+							<div className='pt-9'>
 								<CostDataTable items={costData.cost_analytics} />
 							</div>
-						)
-					)}
-				</div>
+						</>
+					)
+				)}
 			</div>
 		</Page>
 	);
