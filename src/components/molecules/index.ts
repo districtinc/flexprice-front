@@ -139,3 +139,6 @@ export { default as AppliedTaxesTable } from './AppliedTaxesTable';
 // New billing tier components
 export { default as TierBreakdown } from './TierBreakdown';
 export { SubscriptionTable } from './SubscriptionTable';
+
+export { default as CustomerUsageChart } from './CustomerUsageChart';
+export { default as CustomerCostChart } from './CustomerCostChart';

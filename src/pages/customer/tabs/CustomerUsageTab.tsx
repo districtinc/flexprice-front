@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumbsStore } from '@/store/useBreadcrumbsStore';
-import { Card, Loader, FeatureMultiSelect, Input, Button, DateTimePicker, Select } from '@/components/atoms';
+import { Card, Loader, FeatureMultiSelect, Input, Button, DatePicker, Select } from '@/components/atoms';
 import CustomerApi from '@/api/CustomerApi';
 import toast from 'react-hot-toast';
 import EventsApi from '@/api/EventsApi';
@@ -87,14 +87,14 @@ const CustomerUsageTab = () => {
 		return params;
 	}, [customer?.external_id, selectedFeatures, sources, startDate, endDate, windowSize]);
 
-	// Debounced API parameters with 400ms delay
+	// Debounced API parameters with 300ms delay
 	const [debouncedApiParams, setDebouncedApiParams] = useState<GetUsageAnalyticsRequest | null>(null);
 
 	useEffect(() => {
 		if (apiParams) {
 			const timeoutId = setTimeout(() => {
 				setDebouncedApiParams(apiParams);
-			}, 400);
+			}, 300);
 
 			return () => clearTimeout(timeoutId);
 		} else {
@@ -129,11 +129,15 @@ const CustomerUsageTab = () => {
 		setWindowSize(WindowSize.HOUR);
 	};
 
-	if (customerLoading || usageLoading) {
+	if (customerLoading) {
 		return <Loader />;
 	}
 
-	if (customerError || usageError) {
+	if (customerError) {
+		toast.error('Error fetching customer data');
+	}
+
+	if (usageError) {
 		toast.error('Error fetching usage data');
 	}
 
@@ -193,9 +197,9 @@ const CustomerUsageTab = () => {
 						{/* Date Range Selection */}
 						<div className='flex flex-wrap items-center gap-3 pb-4'>
 							<div className='flex items-center gap-2'>
-								<DateTimePicker title='From' date={startDate} setDate={handleStartDateChange} placeholder='Start date' />
+								<DatePicker label='From' date={startDate} setDate={handleStartDateChange} placeholder='Start date' maxDate={endDate} />
 								<span className='text-gray-400 flex items-center px-2'>→</span>
-								<DateTimePicker title='To' date={endDate} setDate={handleEndDateChange} placeholder='End date' />
+								<DatePicker label='To' date={endDate} setDate={handleEndDateChange} placeholder='End date' minDate={startDate} />
 							</div>
 						</div>
 					</div>

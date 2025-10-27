@@ -21,6 +21,15 @@ export type {
 	GetUsageAnalyticsResponse,
 } from './Events';
 
+export type {
+	GetCostAnalyticsRequest,
+	GetCostAnalyticsResponse,
+	GetCombinedAnalyticsRequest,
+	GetCombinedAnalyticsResponse,
+	CostAnalyticItem,
+	CostPoint,
+} from './CostAnalytics';
+
 export type { GetTasksPayload, GetTasksResponse, AddTaskPayload } from './Task';
 
 export type { SignupData, LoginData, LocalUser } from './Auth';

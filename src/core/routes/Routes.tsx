@@ -19,6 +19,7 @@ import {
 	CustomerInvoiceTab as Invoice,
 	CustomerOverviewTab as Overview,
 	CustomerUsageTab as UsageTab,
+	CustomerCostTab as CostTab,
 	CustomerWalletTab as WalletTab,
 	CustomerSubscriptionDetailsPage,
 	AddCreditNotePage as AddCreditPage,
@@ -49,6 +50,7 @@ import {
 	// Usage pages
 	Events as EventsPage,
 	Query as QueryPage,
+	CostAnalytics as CostAnalyticsPage,
 	// Developer pages
 	DeveloperPage,
 	// Onboarding pages
@@ -84,6 +86,7 @@ export const RouteNames = {
 	editMeter: '/usage-tracking/meter/edit-meter',
 	events: '/usage-tracking/events',
 	queryPage: '/usage-tracking/query',
+	costAnalytics: '/usage-tracking/cost-analytics',
 
 	// customer management routes
 	customerManagement: '/customer-management',
@@ -326,6 +329,10 @@ export const MainRouter = createBrowserRouter([
 								path: 'usage',
 								element: <UsageTab />,
 							},
+							{
+								path: 'cost',
+								element: <CostTab />,
+							},
 
 							{
 								path: 'invoice/:invoice_id',
@@ -381,6 +388,10 @@ export const MainRouter = createBrowserRouter([
 					{
 						path: RouteNames.queryPage,
 						element: <QueryPage />,
+					},
+					{
+						path: RouteNames.costAnalytics,
+						element: <CostAnalyticsPage />,
 					},
 				],
 			},

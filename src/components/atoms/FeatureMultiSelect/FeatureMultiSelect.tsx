@@ -3,8 +3,8 @@ import { cn } from '@/lib/utils';
 import Feature, { FEATURE_TYPE } from '@/models/Feature';
 import FeatureApi from '@/api/FeatureApi';
 import { useQuery } from '@tanstack/react-query';
-import { Gauge, SquareCheckBig, Wrench } from 'lucide-react';
-import { FC } from 'react';
+import { Gauge, SquareCheckBig, Wrench, ChevronDown } from 'lucide-react';
+import React, { FC } from 'react';
 
 const fetchFeatures = async () => {
 	return await FeatureApi.getAllFeatures({
@@ -21,6 +21,7 @@ interface Props {
 	description?: string;
 	className?: string;
 	disabledFeatures?: string[];
+	maxCount?: number;
 }
 
 const getFeatureIcon = (featureType: string) => {
@@ -43,7 +44,10 @@ const FeatureMultiSelect: FC<Props> = ({
 	description,
 	className,
 	disabledFeatures,
+	maxCount,
 }) => {
+	const [selectedCount, setSelectedCount] = React.useState(values.length);
+
 	const {
 		data: featuresData,
 		isLoading,
@@ -70,10 +74,11 @@ const FeatureMultiSelect: FC<Props> = ({
 			value: feature.id,
 			label: feature.name,
 			icon: () => getFeatureIcon(feature.type),
+			disabled: disabledFeatures?.includes(feature.id) || false,
 		}))
 		.sort((a, b) => {
-			const aDisabled = disabledFeatures?.includes(a.value);
-			const bDisabled = disabledFeatures?.includes(b.value);
+			const aDisabled = a.disabled;
+			const bDisabled = b.disabled;
 			if (aDisabled && !bDisabled) return 1;
 			if (!aDisabled && bDisabled) return -1;
 			return 0;
@@ -85,13 +90,31 @@ const FeatureMultiSelect: FC<Props> = ({
 			<MultiSelect
 				options={options}
 				onValueChange={(selectedValues) => {
-					const selectedFeatures = featuresData.items.filter((feature: Feature) => selectedValues.includes(feature.id));
+					setSelectedCount(selectedValues.length);
+					// Filter out any disabled options from selectedValues
+					const enabledSelectedValues = selectedValues.filter((value) => {
+						const option = options.find((o) => o.value === value);
+						return !option?.disabled;
+					});
+					const selectedFeatures = featuresData.items.filter((feature: Feature) => enabledSelectedValues.includes(feature.id));
 					onChange(selectedFeatures);
 				}}
 				defaultValue={values}
-				placeholder={placeholder}
-				maxCount={1}
+				placeholder={selectedCount > 0 ? `${selectedCount} ${selectedCount === 1 ? 'feature' : 'features'} selected` : placeholder}
+				maxCount={maxCount}
 				className={cn('h-10', className)}
+				triggerClassName='gap-2'
+				customDisplay={(count) => {
+					if (count === 0) return null;
+					return (
+						<div className='flex items-center justify-between w-full'>
+							<span className='text-sm text-gray-900 font-normal'>
+								{count} {count === 1 ? 'feature' : 'features'} selected
+							</span>
+							<ChevronDown className='h-4 w-4 text-gray-500 shrink-0' />
+						</div>
+					);
+				}}
 			/>
 			{description && <p className='text-sm text-muted-foreground mt-1'>{description}</p>}
 			{error && <p className='text-sm text-red-500 mt-1'>{error}</p>}

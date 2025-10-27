@@ -44,6 +44,8 @@ interface MultiSelectProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 		value: string;
 		/** Optional icon component to display alongside the option. */
 		icon?: React.ComponentType<{ className?: string }>;
+		/** Whether the option is disabled. */
+		disabled?: boolean;
 	}[];
 
 	/**
@@ -97,6 +99,12 @@ interface MultiSelectProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 	 * Optional, can be used to add custom styles.
 	 */
 	triggerClassName?: string;
+
+	/**
+	 * Custom display function for the trigger button.
+	 * Receives the count of selected items and returns a custom React element.
+	 */
+	customDisplay?: (selectedCount: number) => React.ReactNode;
 }
 
 const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
@@ -112,6 +120,7 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
 			modalPopover = false,
 			className,
 			triggerClassName,
+			customDisplay,
 			...props
 		},
 		ref,
@@ -132,6 +141,9 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
 		};
 
 		const toggleOption = (option: string) => {
+			const optionData = options.find((o) => o.value === option);
+			if (optionData?.disabled) return;
+
 			const newSelectedValues = selectedValues.includes(option)
 				? selectedValues.filter((value) => value !== option)
 				: [...selectedValues, option];
@@ -155,10 +167,11 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
 		};
 
 		const toggleAll = () => {
-			if (selectedValues.length === options.length) {
+			const enabledOptions = options.filter((o) => !o.disabled);
+			if (selectedValues.length === enabledOptions.length) {
 				handleClear();
 			} else {
-				const allValues = options.map((option) => option.value);
+				const allValues = enabledOptions.map((option) => option.value);
 				setSelectedValues(allValues);
 				onValueChange(allValues);
 			}
@@ -176,7 +189,14 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
 							triggerClassName,
 							className,
 						)}>
-						{selectedValues.length > 0 ? (
+						{customDisplay ? (
+							customDisplay(selectedValues.length) || (
+								<div className='flex items-center justify-between w-full'>
+									<span className='text-muted-foreground truncate pl-1 font-normal'>{placeholder}</span>
+									<ChevronDown className='h-4 w-4 text-muted-foreground shrink-0' />
+								</div>
+							)
+						) : selectedValues.length > 0 ? (
 							<div className='flex items-center w-full min-w-0'>
 								{/* Selected items container - use all available space */}
 								<div className='flex items-center flex-1 min-w-0 overflow-hidden'>
@@ -258,7 +278,9 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
 									<div
 										className={cn(
 											'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
-											selectedValues.length === options.length ? 'bg-primary text-primary-foreground' : 'opacity-50 [&_svg]:invisible',
+											selectedValues.length === options.filter((o) => !o.disabled).length
+												? 'bg-primary text-primary-foreground'
+												: 'opacity-50 [&_svg]:invisible',
 										)}>
 										<CheckIcon className='h-4 w-4' />
 									</div>
@@ -266,8 +288,13 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
 								</CommandItem>
 								{options.map((option) => {
 									const isSelected = selectedValues.includes(option.value);
+									const isDisabled = option.disabled;
 									return (
-										<CommandItem key={option.value} onSelect={() => toggleOption(option.value)} className='cursor-pointer'>
+										<CommandItem
+											key={option.value}
+											onSelect={() => toggleOption(option.value)}
+											className={cn('cursor-pointer', isDisabled && 'opacity-50 cursor-not-allowed')}
+											disabled={isDisabled}>
 											<div
 												className={cn(
 													'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
