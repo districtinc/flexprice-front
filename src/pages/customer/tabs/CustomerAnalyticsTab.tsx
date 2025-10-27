@@ -6,21 +6,25 @@ import { Card, Loader, FeatureMultiSelect, DateRangePicker } from '@/components/
 import CustomerApi from '@/api/CustomerApi';
 import toast from 'react-hot-toast';
 import EventsApi from '@/api/EventsApi';
+import CostSheetApi from '@/api/CostSheetApi';
 import Feature from '@/models/Feature';
 import { GetUsageAnalyticsRequest } from '@/types/dto';
+import { GetCostAnalyticsRequest } from '@/types/dto/Cost';
 import { WindowSize } from '@/models';
 import CustomerUsageChart from '@/components/molecules/CustomerUsageChart';
 import FlexpriceTable, { ColumnData } from '@/components/molecules/Table';
 import { UsageAnalyticItem } from '@/models/Analytics';
 import { formatNumber } from '@/utils/common';
+import { MetricCard, CostDataTable } from '@/components/molecules';
+import { getCurrencySymbol } from '@/utils/common/helper_functions';
 
-const CustomerUsageTab = () => {
+const CustomerAnalyticsTab = () => {
 	const { id: customerId } = useParams();
 	const { updateBreadcrumb } = useBreadcrumbsStore();
 
 	// Filter states
 	const [selectedFeatures, setSelectedFeatures] = useState<Feature[]>([]);
-	const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 7)));
+	const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 90)));
 	const [endDate, setEndDate] = useState<Date>(new Date());
 
 	const {
@@ -36,15 +40,15 @@ const CustomerUsageTab = () => {
 		enabled: !!customerId,
 	});
 
-	// Prepare API parameters
-	const apiParams: GetUsageAnalyticsRequest | null = useMemo(() => {
+	// Prepare Usage API parameters
+	const usageApiParams: GetUsageAnalyticsRequest | null = useMemo(() => {
 		if (!customer?.external_id) {
 			return null;
 		}
 
 		const params: GetUsageAnalyticsRequest = {
 			external_customer_id: customer.external_id,
-			window_size: WindowSize.HOUR,
+			window_size: WindowSize.DAY,
 		};
 
 		if (selectedFeatures.length > 0) {
@@ -62,38 +66,89 @@ const CustomerUsageTab = () => {
 		return params;
 	}, [customer?.external_id, selectedFeatures, startDate, endDate]);
 
+	// Prepare Cost API parameters
+	const costApiParams: GetCostAnalyticsRequest | null = useMemo(() => {
+		if (!customer?.external_id) {
+			return null;
+		}
+
+		const params: GetCostAnalyticsRequest = {
+			external_customer_id: customer.external_id,
+			expand: ['meter', 'price'],
+		};
+
+		if (selectedFeatures.length > 0) {
+			params.meter_ids = selectedFeatures.map((feature) => feature.meter_id);
+		}
+
+		if (startDate) {
+			params.start_time = startDate.toISOString();
+		}
+
+		if (endDate) {
+			params.end_time = endDate.toISOString();
+		}
+
+		return params;
+	}, [customer?.external_id, selectedFeatures, startDate, endDate]);
+
 	// Debounced API parameters with 300ms delay
-	const [debouncedApiParams, setDebouncedApiParams] = useState<GetUsageAnalyticsRequest | null>(null);
+	const [debouncedUsageParams, setDebouncedUsageParams] = useState<GetUsageAnalyticsRequest | null>(null);
+	const [debouncedCostParams, setDebouncedCostParams] = useState<GetCostAnalyticsRequest | null>(null);
 
 	useEffect(() => {
-		if (apiParams) {
+		if (usageApiParams) {
 			const timeoutId = setTimeout(() => {
-				setDebouncedApiParams(apiParams);
+				setDebouncedUsageParams(usageApiParams);
 			}, 300);
 
 			return () => clearTimeout(timeoutId);
 		} else {
-			setDebouncedApiParams(null);
+			setDebouncedUsageParams(null);
 		}
-	}, [apiParams]);
+	}, [usageApiParams]);
+
+	useEffect(() => {
+		if (costApiParams) {
+			const timeoutId = setTimeout(() => {
+				setDebouncedCostParams(costApiParams);
+			}, 300);
+
+			return () => clearTimeout(timeoutId);
+		} else {
+			setDebouncedCostParams(null);
+		}
+	}, [costApiParams]);
 
 	const {
 		data: usageData,
 		isLoading: usageLoading,
 		error: usageError,
 	} = useQuery({
-		queryKey: ['usage', customerId, debouncedApiParams],
+		queryKey: ['usage', customerId, debouncedUsageParams],
 		queryFn: async () => {
-			if (!debouncedApiParams) {
+			if (!debouncedUsageParams) {
 				throw new Error('API parameters not available');
 			}
-			return await EventsApi.getUsageAnalyticsV2(debouncedApiParams);
+			return await EventsApi.getUsageAnalytics(debouncedUsageParams);
 		},
-		enabled: !!debouncedApiParams,
+		enabled: !!debouncedUsageParams,
+	});
+
+	const {
+		data: costData,
+		isLoading: costLoading,
+		error: costError,
+	} = useQuery({
+		queryKey: ['cost-analytics', customerId, debouncedCostParams],
+		queryFn: async () => {
+			return await CostSheetApi.GetCostAnalytics(debouncedCostParams ?? {});
+		},
+		enabled: !!debouncedCostParams,
 	});
 
 	useEffect(() => {
-		updateBreadcrumb(4, 'Usage');
+		updateBreadcrumb(4, 'Analytics');
 	}, [updateBreadcrumb]);
 
 	if (customerLoading) {
@@ -108,6 +163,10 @@ const CustomerUsageTab = () => {
 		toast.error('Error fetching usage data');
 	}
 
+	if (costError) {
+		toast.error('Error fetching cost data');
+	}
+
 	const handleDateRangeChange = ({ startDate: newStartDate, endDate: newEndDate }: { startDate?: Date; endDate?: Date }) => {
 		if (newStartDate) {
 			setStartDate(newStartDate);
@@ -117,12 +176,14 @@ const CustomerUsageTab = () => {
 		}
 	};
 
+	const isLoading = usageLoading || costLoading;
+
 	return (
 		<div className='space-y-6'>
-			<h3 className='text-lg font-medium text-gray-900 mb-8'>Usage Analytics</h3>
+			<h3 className='text-lg font-medium text-gray-900 mb-8 mt-1'>Analytics</h3>
 
 			{/* Filters Section */}
-			<div className='flex flex-wrap items-end gap-3'>
+			<div className='flex flex-wrap items-end gap-8'>
 				<div className='flex-1 min-w-[200px] max-w-md'>
 					<FeatureMultiSelect
 						label='Features'
@@ -141,21 +202,53 @@ const CustomerUsageTab = () => {
 				/>
 			</div>
 
-			{/* Chart Display */}
-			{usageLoading ? (
+			{/* Summary Metrics - Revenue tiles */}
+			<div className='pt-9'>
+				{isLoading ? (
+					<div className='flex items-center justify-center py-12'>
+						<Loader />
+					</div>
+				) : (
+					costData &&
+					(() => {
+						const totalRevenue = parseFloat(costData.total_revenue || '0');
+						const totalCost = parseFloat(costData.total_cost || '0');
+						const margin = parseFloat(costData.margin || '0');
+						const marginPercent = parseFloat(costData.margin_percent || '0');
+
+						return (
+							<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+								<MetricCard title='Revenue' value={totalRevenue} currency={costData.currency} />
+								<MetricCard title='Cost' value={totalCost} currency={costData.currency} />
+								<MetricCard title='Margin' value={margin} currency={costData.currency} showChangeIndicator={true} isNegative={margin < 0} />
+								<MetricCard
+									title='Margin %'
+									value={marginPercent}
+									currency={costData.currency}
+									showChangeIndicator={true}
+									isNegative={marginPercent < 0}
+								/>
+							</div>
+						);
+					})()
+				)}
+			</div>
+
+			{/* Usage Chart */}
+			{isLoading ? (
 				<div className='flex items-center justify-center py-12'>
 					<Loader />
 				</div>
 			) : (
 				usageData && (
-					<div>
+					<div className=''>
 						<CustomerUsageChart data={usageData} />
 					</div>
 				)
 			)}
 
 			{/* Usage Data Table */}
-			{usageLoading ? (
+			{isLoading ? (
 				<div className='mt-6'>
 					<h1 className='text-lg font-medium text-gray-900 mb-4'>Usage Breakdown</h1>
 					<Card>
@@ -168,11 +261,33 @@ const CustomerUsageTab = () => {
 				</div>
 			) : (
 				usageData && (
-					<div className='mt-6'>
+					<div className='!mt-10'>
 						<UsageDataTable items={usageData.items} />
 					</div>
 				)
 			)}
+
+			{/* Cost Data Table */}
+			<div className='pt-9'>
+				{isLoading ? (
+					<div className='mt-6'>
+						<h1 className='text-lg font-medium text-gray-900 mb-4'>Cost Breakdown</h1>
+						<Card>
+							<div className='p-12'>
+								<div className='flex items-center justify-center'>
+									<Loader />
+								</div>
+							</div>
+						</Card>
+					</div>
+				) : (
+					costData && (
+						<div className=''>
+							<CostDataTable items={costData.cost_analytics} />
+						</div>
+					)
+				)}
+			</div>
 		</div>
 	);
 };
@@ -202,9 +317,11 @@ const UsageDataTable: React.FC<{ items: UsageAnalyticItem[] }> = ({ items }) => 
 			title: 'Total Cost',
 			render: (row: UsageAnalyticItem) => {
 				if (row.total_cost === 0 || !row.currency) return '-';
+				const currency = getCurrencySymbol(row.currency);
 				return (
 					<span>
-						{formatNumber(row.total_cost, 2)} {row.currency}
+						{currency}
+						{formatNumber(row.total_cost, 2)}
 					</span>
 				);
 			},
@@ -226,4 +343,4 @@ const UsageDataTable: React.FC<{ items: UsageAnalyticItem[] }> = ({ items }) => 
 	);
 };
 
-export default CustomerUsageTab;
+export default CustomerAnalyticsTab;

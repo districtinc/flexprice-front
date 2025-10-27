@@ -2,6 +2,7 @@ import React from 'react';
 import FlexpriceTable, { ColumnData } from '@/components/molecules/Table';
 import { CostAnalyticItem } from '@/types/dto/Cost';
 import { formatNumber } from '@/utils/common';
+import { getCurrencySymbol } from '@/utils/common/helper_functions';
 
 interface CostDataTableProps {
 	items: CostAnalyticItem[];
@@ -25,9 +26,11 @@ export const CostDataTable: React.FC<CostDataTableProps> = ({ items }) => {
 		{
 			title: 'Total Cost',
 			render: (row: CostAnalyticItem) => {
+				const currency = getCurrencySymbol(row.currency);
 				return (
 					<span>
-						{formatNumber(parseFloat(row.total_cost || '0'), 2)} {row.currency}
+						{currency}
+						{formatNumber(parseFloat(row.total_cost || '0'), 2)}
 					</span>
 				);
 			},

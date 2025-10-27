@@ -70,6 +70,10 @@ const AppSidebar: React.FC<React.ComponentProps<typeof Sidebar>> = ({ ...props }
 					title: 'Payments',
 					url: RouteNames.payments,
 				},
+				{
+					title: 'Analytics',
+					url: RouteNames.analytics,
+				},
 			],
 		},
 		{
@@ -84,10 +88,6 @@ const AppSidebar: React.FC<React.ComponentProps<typeof Sidebar>> = ({ ...props }
 				{
 					title: 'Query',
 					url: RouteNames.queryPage,
-				},
-				{
-					title: 'Cost Analytics',
-					url: RouteNames.costAnalytics,
 				},
 			],
 		},

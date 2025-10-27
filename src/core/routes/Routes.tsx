@@ -18,8 +18,7 @@ import {
 	InvoiceDetailsPage,
 	CustomerInvoiceTab as Invoice,
 	CustomerOverviewTab as Overview,
-	CustomerUsageTab as UsageTab,
-	CustomerCostTab as CostTab,
+	CustomerAnalyticsTab as AnalyticsTab,
 	CustomerWalletTab as WalletTab,
 	CustomerSubscriptionDetailsPage,
 	AddCreditNotePage as AddCreditPage,
@@ -90,7 +89,6 @@ export const RouteNames = {
 	editMeter: '/usage-tracking/meter/edit-meter',
 	events: '/usage-tracking/events',
 	queryPage: '/usage-tracking/query',
-	costAnalytics: '/usage-tracking/cost-analytics',
 
 	// customer management routes
 	customerManagement: '/customer-management',
@@ -104,6 +102,7 @@ export const RouteNames = {
 	creditNotes: '/customer-management/credit-notes',
 	payments: '/customer-management/payments',
 	usage: '/customer-management/usage',
+	analytics: '/customer-management/analytics',
 
 	// product catalog routes
 	productCatalog: '/product-catalog',
@@ -314,6 +313,10 @@ export const MainRouter = createBrowserRouter([
 						element: <PaymentPage />,
 					},
 					{
+						path: RouteNames.analytics,
+						element: <CostAnalyticsPage />,
+					},
+					{
 						path: `${RouteNames.customers}/:id`,
 						element: <CustomerProfilePage />,
 						children: [
@@ -348,12 +351,8 @@ export const MainRouter = createBrowserRouter([
 								element: <TaxAssociation />,
 							},
 							{
-								path: 'usage',
-								element: <UsageTab />,
-							},
-							{
-								path: 'cost',
-								element: <CostTab />,
+								path: 'analytics',
+								element: <AnalyticsTab />,
 							},
 
 							{
@@ -410,10 +409,6 @@ export const MainRouter = createBrowserRouter([
 					{
 						path: RouteNames.queryPage,
 						element: <QueryPage />,
-					},
-					{
-						path: RouteNames.costAnalytics,
-						element: <CostAnalyticsPage />,
 					},
 				],
 			},

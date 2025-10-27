@@ -16,7 +16,7 @@ const CostAnalyticsPage: React.FC = () => {
 	// Filter states
 	const [customerId, setCustomerId] = useState<string>('');
 	const [selectedFeatures, setSelectedFeatures] = useState<Feature[]>([]);
-	const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 7)));
+	const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 90)));
 	const [endDate, setEndDate] = useState<Date>(new Date());
 
 	// Prepare API parameters
@@ -75,8 +75,7 @@ const CostAnalyticsPage: React.FC = () => {
 	});
 
 	useEffect(() => {
-		updateBreadcrumb(1, 'Usage Tracking');
-		updateBreadcrumb(2, 'Cost Analytics');
+		updateBreadcrumb(1, 'Analytics');
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
@@ -94,12 +93,12 @@ const CostAnalyticsPage: React.FC = () => {
 	};
 
 	return (
-		<Page heading='Cost Analytics'>
-			<ApiDocsContent tags={['Cost Analytics']} />
+		<Page heading='Analytics'>
+			<ApiDocsContent tags={['Analytics']} />
 			<div className='space-y-6'>
 				{/* Filters Section */}
-				<div className='flex flex-wrap items-end gap-3'>
-					<div className='flex-1 min-w-[200px] max-w-md'>
+				<div className='grid grid-cols-1 md:grid-cols-3 gap-3 w-full'>
+					<div>
 						<FeatureMultiSelect
 							label='Features'
 							placeholder='Select features'
@@ -108,15 +107,20 @@ const CostAnalyticsPage: React.FC = () => {
 							className='text-sm'
 						/>
 					</div>
-					<DateRangePicker
-						startDate={startDate}
-						endDate={endDate}
-						onChange={handleDateRangeChange}
-						placeholder='Select date range'
-						title='Date Range'
-					/>
-					<div className='min-w-[150px] max-w-[200px]'>
+					<div>
 						<Input label='Customer ID' placeholder='External customer ID' value={customerId} onChange={setCustomerId} className='text-sm' />
+					</div>
+					<div>
+						<DateRangePicker
+							startDate={startDate}
+							endDate={endDate}
+							onChange={handleDateRangeChange}
+							placeholder='Select date range'
+							title='Date Range'
+							className='w-full'
+							popoverClassName='w-full'
+							popoverTriggerClassName='w-full'
+						/>
 					</div>
 				</div>
 
@@ -133,8 +137,6 @@ const CostAnalyticsPage: React.FC = () => {
 							const totalCost = parseFloat(costData.total_cost || '0');
 							const margin = parseFloat(costData.margin || '0');
 							const marginPercent = parseFloat(costData.margin_percent || '0');
-							const roi = parseFloat(costData.roi || '0');
-							const roiPercent = parseFloat(costData.roi_percent || '0');
 
 							return (
 								<div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
@@ -144,20 +146,15 @@ const CostAnalyticsPage: React.FC = () => {
 										title='Margin'
 										value={margin}
 										currency={costData.currency}
-										showPercentage={true}
-										percentage={marginPercent}
 										showChangeIndicator={true}
 										isNegative={margin < 0}
 									/>
 									<MetricCard
-										title='ROI'
-										value={roi}
+										title='Margin %'
+										value={marginPercent}
 										currency={costData.currency}
-										showPercentage={true}
-										percentage={roiPercent}
 										showChangeIndicator={true}
-										isNegative={roi < 0}
-										indicatorRightPosition='12.74px'
+										isNegative={marginPercent < 0}
 									/>
 								</div>
 							);
