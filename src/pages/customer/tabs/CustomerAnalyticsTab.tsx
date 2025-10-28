@@ -22,7 +22,7 @@ const CustomerAnalyticsTab = () => {
 
 	// Filter states
 	const [selectedFeatures, setSelectedFeatures] = useState<Feature[]>([]);
-	const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() - 90)));
+	const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() - 30)));
 	const [endDate, setEndDate] = useState<Date | undefined>(new Date());
 
 	const {

@@ -15,7 +15,7 @@ const CostAnalyticsPage: React.FC = () => {
 	// Filter states
 	const [customerId, setCustomerId] = useState<string>('');
 	const [selectedFeatures, setSelectedFeatures] = useState<Feature[]>([]);
-	const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 90)));
+	const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(new Date().getDate() - 30)));
 	const [endDate, setEndDate] = useState<Date>(new Date());
 
 	// Prepare API parameters
