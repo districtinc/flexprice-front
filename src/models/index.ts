@@ -97,7 +97,7 @@ export type { Plan } from './Plan';
 
 // Price
 export type { Price, Tier, TransformQuantity, PriceUnitConfig, CreatePriceTier } from './Price';
-export { BILLING_MODEL, BILLING_PERIOD, PRICE_TYPE, PRICE_UNIT_TYPE, TIER_MODE, PRICE_ENTITY_TYPE } from './Price';
+export { BILLING_MODEL, BILLING_PERIOD, PRICE_TYPE, PRICE_UNIT_TYPE, TIER_MODE, PRICE_ENTITY_TYPE, PRICE_STATUS } from './Price';
 
 // SecretKey
 export type { SecretKey } from './SecretKey';

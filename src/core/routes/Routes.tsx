@@ -21,6 +21,7 @@ import {
 	CustomerAnalyticsTab as AnalyticsTab,
 	CustomerWalletTab as WalletTab,
 	CustomerSubscriptionDetailsPage,
+	CustomerSubscriptionEditPage,
 	AddCreditNotePage as AddCreditPage,
 	CreditNote,
 	CreditNotesPage,
@@ -312,6 +313,10 @@ export const MainRouter = createBrowserRouter([
 						element: <SubscriptionsPage />,
 					},
 					{
+						path: `${RouteNames.subscriptions}/:id/edit`,
+						element: <CustomerSubscriptionEditPage />,
+					},
+					{
 						path: `${RouteNames.customers}/:id/add-subscription`,
 						element: <CreateCustomerSubscriptionPage />,
 					},
@@ -373,6 +378,10 @@ export const MainRouter = createBrowserRouter([
 							{
 								path: 'subscription/:subscription_id',
 								element: <CustomerSubscriptionDetailsPage />,
+							},
+							{
+								path: 'subscription/:subscription_id/edit',
+								element: <CustomerSubscriptionEditPage />,
 							},
 						],
 					},
