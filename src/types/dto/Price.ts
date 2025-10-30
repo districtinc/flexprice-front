@@ -58,6 +58,7 @@ export interface CreatePriceRequest {
 	price_unit_config?: PriceUnitConfig;
 	start_date?: string; // ISO date string
 	end_date?: string; // ISO date string
+	group_id?: string;
 }
 
 export interface GetPriceResponse extends Price {

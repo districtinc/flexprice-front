@@ -28,6 +28,7 @@ export interface Price extends BaseModel {
 	readonly end_date?: string;
 	readonly metadata: Metadata | null;
 	readonly price_unit_config?: PriceUnitConfig;
+	readonly group_id?: string;
 }
 
 export interface Tier {
