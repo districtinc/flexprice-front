@@ -1,7 +1,7 @@
 import { Card, CardHeader, NoDataCard, Chip, Tooltip } from '@/components/atoms';
 import { ChargeValueCell, ColumnData, FlexpriceTable, TerminateLineItemModal, DropdownMenu } from '@/components/molecules';
 import { LineItem } from '@/models/Subscription';
-import { FC, useState, useCallback } from 'react';
+import { FC, useState, useCallback, useMemo } from 'react';
 import { Trash2, Pencil } from 'lucide-react';
 import { ENTITY_STATUS } from '@/models/base';
 import { formatBillingPeriodForDisplay, getPriceTypeLabel } from '@/utils/common/helper_functions';
@@ -13,6 +13,13 @@ interface Props {
 	onEdit?: (lineItem: LineItem) => void;
 	onTerminate?: (lineItemId: string, endDate?: string) => void;
 	isLoading?: boolean;
+}
+
+interface LineItemWithStatus extends LineItem {
+	precomputedStatus: PRICE_STATUS;
+	statusVariant: 'info' | 'default' | 'success';
+	statusLabel: string;
+	tooltipContent: React.ReactNode;
 }
 
 interface LineItemDropdownProps {
@@ -183,7 +190,40 @@ const SubscriptionLineItemTable: FC<Props> = ({ data, onEdit, onTerminate, isLoa
 		}
 	};
 
-	const columns: ColumnData<LineItem>[] = [
+	// ===== PROCESSED LINE ITEMS WITH PRECOMPUTED STATUS =====
+	const processedLineItems = useMemo<LineItemWithStatus[]>(() => {
+		if (!data || data.length === 0) return [];
+
+		// Precompute status and related data for each line item
+		const lineItemsWithStatus: LineItemWithStatus[] = data.map((lineItem) => {
+			const status = getLineItemStatus(lineItem);
+			const variant = getStatusChipVariant(status);
+			const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+			const tooltipContent = formatLineItemDateTooltip(lineItem);
+
+			return {
+				...lineItem,
+				precomputedStatus: status,
+				statusVariant: variant,
+				statusLabel,
+				tooltipContent,
+			};
+		});
+
+		// Sort: active first, then upcoming, then inactive
+		const statusOrder: Record<PRICE_STATUS, number> = {
+			[PRICE_STATUS.ACTIVE]: 0,
+			[PRICE_STATUS.UPCOMING]: 1,
+			[PRICE_STATUS.INACTIVE]: 2,
+		};
+
+		return lineItemsWithStatus.sort((a, b) => {
+			return statusOrder[a.precomputedStatus] - statusOrder[b.precomputedStatus];
+		});
+	}, [data]);
+
+	// ===== TABLE COLUMNS =====
+	const columns: ColumnData<LineItemWithStatus>[] = [
 		{
 			title: 'Display Name',
 			fieldName: 'display_name',
@@ -198,20 +238,15 @@ const SubscriptionLineItemTable: FC<Props> = ({ data, onEdit, onTerminate, isLoa
 		},
 		{
 			title: 'Status',
-			render(row) {
-				const status = getLineItemStatus(row);
-				const variant = getStatusChipVariant(status);
-				const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-				const tooltipContent = formatLineItemDateTooltip(row);
-
+			render(rowData) {
 				return (
 					<Tooltip
-						content={tooltipContent}
+						content={rowData.tooltipContent}
 						delayDuration={0}
 						sideOffset={5}
 						className='bg-white border border-gray-200 shadow-lg text-sm text-gray-900 px-4 py-3 rounded-lg max-w-[320px]'>
 						<span>
-							<Chip label={statusLabel} variant={variant} />
+							<Chip label={rowData.statusLabel} variant={rowData.statusVariant} />
 						</span>
 					</Tooltip>
 				);
@@ -260,7 +295,7 @@ const SubscriptionLineItemTable: FC<Props> = ({ data, onEdit, onTerminate, isLoa
 		);
 	}
 
-	if (!data || data.length === 0) {
+	if (!processedLineItems || processedLineItems.length === 0) {
 		return <NoDataCard title='Subscription Line Items' subtitle='No line items found for this subscription' />;
 	}
 
@@ -279,7 +314,7 @@ const SubscriptionLineItemTable: FC<Props> = ({ data, onEdit, onTerminate, isLoa
 
 			<Card variant='notched'>
 				<CardHeader title='Subscription Line Items' />
-				<FlexpriceTable showEmptyRow={false} data={data} columns={columns} />
+				<FlexpriceTable showEmptyRow={false} data={processedLineItems} columns={columns} />
 			</Card>
 		</>
 	);
