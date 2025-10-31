@@ -304,6 +304,7 @@ const EntityChargesPage: React.FC<EntityChargesPageProps> = ({ entityType, entit
 				transform_quantity: price.transform_quantity || undefined,
 				price_unit_config: price.price_unit_config,
 				group_id: price.group_id,
+				start_date: price.start_date ? new Date(price.start_date).toISOString() : undefined,
 			}));
 
 			const bulkPriceRequest: CreateBulkPriceRequest = {

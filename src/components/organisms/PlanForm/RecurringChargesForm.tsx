@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatBillingPeriodForPrice, getCurrencySymbol } from '@/utils/common/helper_functions';
 import { billlingPeriodOptions, currencyOptions } from '@/constants/constants';
 import { InternalPrice } from './SetupChargesSection';
 import { PriceInternalState } from './UsagePricingForm';
-import { CheckboxRadioGroup, FormHeader, Input, Spacer, Button, Select } from '@/components/atoms';
+import { CheckboxRadioGroup, FormHeader, Input, Spacer, Button, Select, DatePicker } from '@/components/atoms';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import RecurringChargePreview from './RecurringChargePreview';
@@ -32,7 +32,17 @@ const RecurringChargesForm = ({
 	entityId,
 }: Props) => {
 	const [localPrice, setLocalPrice] = useState<Partial<InternalPrice>>(price);
+	const [startDate, setStartDate] = useState<Date | undefined>(price.start_date ? new Date(price.start_date) : undefined);
 	const [errors, setErrors] = useState<Partial<Record<keyof InternalPrice, string>>>({});
+
+	// Update startDate when price changes (e.g., when editing)
+	useEffect(() => {
+		if (price.start_date) {
+			setStartDate(new Date(price.start_date));
+		} else {
+			setStartDate(undefined);
+		}
+	}, [price.start_date]);
 
 	const validate = () => {
 		const newErrors: Partial<Record<keyof InternalPrice, string>> = {};
@@ -66,6 +76,7 @@ const RecurringChargesForm = ({
 			...localPrice,
 			entity_type: entityType,
 			entity_id: entityId || '',
+			start_date: startDate ? startDate.toISOString() : undefined,
 		};
 
 		if (price.internal_state === PriceInternalState.EDIT) {
@@ -127,6 +138,18 @@ const RecurringChargesForm = ({
 				hiddenIfEmpty
 			/>
 			<Spacer height={'16px'} />
+			<DatePicker
+				popoverTriggerClassName='w-full'
+				className='w-full'
+				popoverClassName='w-full'
+				popoverContentClassName='w-full'
+				date={startDate}
+				setDate={setStartDate}
+				label='Start Date (Optional)'
+				placeholder='Select start date'
+				minDate={new Date()}
+			/>
+			<Spacer height={'16px'} />
 			<FormHeader title='Billing Timing' variant='form-component-title' />
 			{/* starting billing preffercences */}
 
@@ -136,12 +159,12 @@ const RecurringChargesForm = ({
 				checkboxItems={[
 					{
 						label: 'Advance',
-						value: 'ADVANCE',
+						value: INVOICE_CADENCE.ADVANCE,
 						description: 'Charge at the start of each billing cycle.',
 					},
 					{
 						label: 'Arrear',
-						value: 'ARREAR',
+						value: INVOICE_CADENCE.ARREAR,
 						description: 'Charge at the end of the billing cycle.',
 					},
 				]}

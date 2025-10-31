@@ -1,6 +1,6 @@
 import { Price } from '@/models/Price';
 import { FC, useState, useEffect } from 'react';
-import { Button, Input, Select, SelectOption, Spacer } from '@/components/atoms';
+import { Button, Input, Select, SelectOption, Spacer, DatePicker } from '@/components/atoms';
 import SelectMeter from './SelectMeter';
 import SelectGroup from './SelectGroup';
 // import { Pencil, Trash2 } from 'lucide-react';
@@ -96,6 +96,7 @@ const UsagePricingForm: FC<Props> = ({
 		unit: '',
 		price: '',
 	});
+	const [startDate, setStartDate] = useState<Date | undefined>(price.start_date ? new Date(price.start_date) : undefined);
 
 	const [errors, setErrors] = useState<Partial<Record<keyof Price, any>>>({});
 	const [inputErrors, setInputErrors] = useState({
@@ -117,6 +118,7 @@ const UsagePricingForm: FC<Props> = ({
 				} as Meter);
 			}
 			setBillingPeriod(price.billing_period || billlingPeriodOptions[1].value);
+			setStartDate(price.start_date ? new Date(price.start_date) : undefined);
 
 			if (price.billing_model === BILLING_MODEL.FLAT_FEE) {
 				setFlatFee(price.amount || '');
@@ -284,6 +286,7 @@ const UsagePricingForm: FC<Props> = ({
 			entity_type: entityType,
 			entity_id: entityId || '',
 			group_id: groupId,
+			start_date: startDate ? startDate.toISOString() : undefined,
 		};
 
 		let finalPrice: Partial<Price>;
@@ -487,6 +490,18 @@ const UsagePricingForm: FC<Props> = ({
 				}}
 				error={inputErrors.invoiceCadenceError}
 			/> */}
+			<Spacer height={'16px'} />
+			<DatePicker
+				date={startDate}
+				popoverTriggerClassName='w-full'
+				className='w-full'
+				popoverClassName='w-full'
+				popoverContentClassName='w-full'
+				setDate={setStartDate}
+				label='Start Date (Optional)'
+				placeholder='Select start date'
+				minDate={new Date()}
+			/>
 			<SelectGroup
 				value={groupId}
 				onChange={(group: Group | null) => setGroupId(group?.id)}
@@ -495,6 +510,7 @@ const UsagePricingForm: FC<Props> = ({
 				description='Assign this price to a group for better organization'
 				hiddenIfEmpty
 			/>
+
 			<Spacer height={'16px'} />
 			<div className='flex justify-end'>
 				<Button onClick={handleCancel} variant='secondary' className='mr-4 text-zinc-900'>
