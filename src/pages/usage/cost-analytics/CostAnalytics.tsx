@@ -30,10 +30,10 @@ const CostAnalyticsPage: React.FC = () => {
 		}
 
 		if (selectedFeatures.length > 0) {
-			params.meter_ids = selectedFeatures.map((feature) => feature.meter_id);
+			params.feature_ids = selectedFeatures.map((feature) => feature.id);
 		} else if (fetchedFeatures.length > 0) {
 			// Here if the features are not selected, we should give first 10 features
-			params.meter_ids = fetchedFeatures.slice(0, 10).map((feature) => feature.meter_id);
+			params.feature_ids = fetchedFeatures.slice(0, 10).map((feature) => feature.id);
 		}
 
 		if (startDate) {
