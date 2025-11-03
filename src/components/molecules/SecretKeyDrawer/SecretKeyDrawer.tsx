@@ -8,6 +8,7 @@ import { User } from '@/models';
 import { toast } from 'react-hot-toast';
 import { Copy, AlertTriangle, Eye, EyeOff, Info, X } from 'lucide-react';
 import { refetchQueries } from '@/core/services/tanstack/ReactQueryProvider';
+import { ServerError } from '@/core/axios/types';
 
 interface Props {
 	isOpen: boolean;
