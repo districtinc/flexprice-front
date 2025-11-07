@@ -14,6 +14,10 @@ import ActionButton from '@/components/atoms/ActionButton/ActionButton';
 
 // Utility function to format permissions for display
 export const formatPermissionDisplay = (permissions: readonly string[]): string => {
+	if (!permissions || permissions.length === 0) {
+		return 'none';
+	}
+
 	const hasRead = permissions.includes('read');
 	const hasWrite = permissions.includes('write');
 
@@ -30,6 +34,9 @@ export const formatPermissionDisplay = (permissions: readonly string[]): string 
 
 // Utility function to get permission icon based on permission level
 export const getPermissionIcon = (permissions: readonly string[]): LucideIcon => {
+	if (!permissions || permissions.length === 0) {
+		return EyeOff;
+	}
 	const hasRead = permissions.includes('read');
 	const hasWrite = permissions.includes('write');
 
@@ -46,6 +53,9 @@ export const getPermissionIcon = (permissions: readonly string[]): LucideIcon =>
 
 // Utility function to get color based on permission level
 export const getPermissionColor = (permissions: readonly string[]): string => {
+	if (!permissions || permissions.length === 0) {
+		return 'text-gray-500';
+	}
 	const hasRead = permissions.includes('read');
 	const hasWrite = permissions.includes('write');
 
