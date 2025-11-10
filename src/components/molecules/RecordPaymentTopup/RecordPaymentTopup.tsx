@@ -1,4 +1,4 @@
-import { Button, Input, Select, Textarea, PaymentUrlSuccessDialog, DatePicker } from '@/components/atoms';
+import { Button, Input, Select, Textarea, PaymentUrlSuccessDialog, DatePicker, Dialog } from '@/components/atoms';
 import { FC, useState, useEffect, useMemo } from 'react';
 import { getCurrencySymbol } from '@/utils/common/helper_functions';
 import { PAYMENT_METHOD_TYPE, PAYMENT_DESTINATION_TYPE, Payment } from '@/models/Payment';
@@ -9,7 +9,6 @@ import { RecordPaymentPayload } from '@/types/dto/Payment';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { LoaderCircleIcon } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui';
 import { ServerError } from '@/core/axios/types';
 import { CONNECTION_PROVIDER_TYPE } from '@/models/Connection';
 
@@ -338,66 +337,66 @@ const RecordPaymentTopup: FC<Props> = ({
 
 	return (
 		<>
-			<Dialog open={isOpen} onOpenChange={onOpenChange}>
-				<DialogContent className='bg-white sm:max-w-[500px]'>
-					<DialogHeader>
-						<DialogTitle className='text-lg font-semibold text-[#18181B]'>Record Payment</DialogTitle>
-					</DialogHeader>
-					<div className='space-y-4 py-4'>
-						<Input
-							label='Amount'
-							placeholder='0.00'
-							variant='formatted-number'
-							inputPrefix={getCurrencySymbol(currency)}
-							value={formData.amount.toString()}
-							onChange={(value) => setFormData({ ...formData, amount: Number(value) || 0 })}
-							error={errors.amount}
-							description={max_amount ? `Amount Due:${getCurrencySymbol(currency)}${max_amount}` : undefined}
-						/>
+			<Dialog
+				isOpen={isOpen}
+				onOpenChange={onOpenChange}
+				title='Record Payment'
+				className='sm:max-w-[500px]'
+				titleClassName='text-lg font-semibold text-[#18181B]'>
+				<div className='space-y-4 py-4'>
+					<Input
+						label='Amount'
+						placeholder='0.00'
+						variant='formatted-number'
+						inputPrefix={getCurrencySymbol(currency)}
+						value={formData.amount.toString()}
+						onChange={(value) => setFormData({ ...formData, amount: Number(value) || 0 })}
+						error={errors.amount}
+						description={max_amount ? `Amount Due:${getCurrencySymbol(currency)}${max_amount}` : undefined}
+					/>
 
+					<Select
+						label='Payment Method'
+						placeholder='Select payment method'
+						options={paymentMethodOptions}
+						value={formData.payment_method_type}
+						onChange={(value) => {
+							setFormData({
+								...formData,
+								payment_method_type: value as PAYMENT_METHOD_TYPE,
+								selected_connection_id: '',
+								reference_id: '',
+								description: '',
+								wallet_id: '',
+								recorded_at: undefined,
+							});
+						}}
+						error={errors.payment_method_type}
+					/>
+
+					{formData.payment_method_type === PAYMENT_METHOD_TYPE.PAYMENT_LINK && providerOptions.length > 0 && (
 						<Select
-							label='Payment Method'
-							placeholder='Select payment method'
-							options={paymentMethodOptions}
-							value={formData.payment_method_type}
-							onChange={(value) => {
-								setFormData({
-									...formData,
-									payment_method_type: value as PAYMENT_METHOD_TYPE,
-									selected_connection_id: '',
-									reference_id: '',
-									description: '',
-									wallet_id: '',
-									recorded_at: undefined,
-								});
-							}}
-							error={errors.payment_method_type}
+							label='Payment Provider'
+							placeholder='Select payment provider'
+							options={providerOptions}
+							value={formData.selected_connection_id}
+							onChange={(connectionId) => setFormData({ ...formData, selected_connection_id: connectionId })}
+							error={errors.selected_connection_id}
 						/>
+					)}
 
-						{formData.payment_method_type === PAYMENT_METHOD_TYPE.PAYMENT_LINK && providerOptions.length > 0 && (
-							<Select
-								label='Payment Provider'
-								placeholder='Select payment provider'
-								options={providerOptions}
-								value={formData.selected_connection_id}
-								onChange={(connectionId) => setFormData({ ...formData, selected_connection_id: connectionId })}
-								error={errors.selected_connection_id}
-							/>
-						)}
+					{formData.payment_method_type && renderPaymentMethodFields()}
 
-						{formData.payment_method_type && renderPaymentMethodFields()}
-
-						<div className='pt-2 flex justify-end'>
-							<Button variant='outline' onClick={() => onOpenChange(false)} className='mr-2'>
-								Cancel
-							</Button>
-							<Button onClick={handleSubmit} disabled={isPending || !formData.payment_method_type} isLoading={isPending}>
-								{isPending && <LoaderCircleIcon className='w-4 h-4 animate-spin mr-2' />}
-								Record
-							</Button>
-						</div>
+					<div className='pt-2 flex justify-end'>
+						<Button variant='outline' onClick={() => onOpenChange(false)} className='mr-2'>
+							Cancel
+						</Button>
+						<Button onClick={handleSubmit} disabled={isPending || !formData.payment_method_type} isLoading={isPending}>
+							{isPending && <LoaderCircleIcon className='w-4 h-4 animate-spin mr-2' />}
+							Record
+						</Button>
 					</div>
-				</DialogContent>
+				</div>
 			</Dialog>
 			<PaymentUrlSuccessDialog
 				isOpen={paymentUrlPopup.isOpen}
