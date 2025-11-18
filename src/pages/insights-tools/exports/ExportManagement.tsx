@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Eye, Plus } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { TaskApi, ConnectionApi } from '@/api';
+import { ENTITY_STATUS } from '@/models';
 import toast from 'react-hot-toast';
 import ExportDrawer from '@/components/molecules/ExportDrawer/ExportDrawer';
 import { formatEntityType } from '@/utils/common/helper_functions';
@@ -32,7 +33,7 @@ const ExportManagement = () => {
 	});
 
 	// Filter out deleted tasks
-	const tasks = (tasksResponse?.items || []).filter((task) => task.status !== 'deleted');
+	const tasks = (tasksResponse?.items || []).filter((task) => task.status !== ENTITY_STATUS.DELETED);
 
 	// Delete task mutation
 	const { mutate: deleteTask, isPending: isDeletingTask } = useMutation({

@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import FlexpriceTable, { ColumnData } from '../Table';
 import Addon, { ADDON_TYPE } from '@/models/Addon';
+import { ENTITY_STATUS } from '@/models';
 import { ActionButton, Chip } from '@/components/atoms';
 import { toSentenceCase } from '@/utils/common/helper_functions';
 import formatChips from '@/utils/common/format_chips';
@@ -62,16 +63,19 @@ const AddonTable: FC<Props> = ({ data, onEdit }) => {
 			render(row) {
 				return (
 					<ActionButton
+						id={row?.id}
 						deleteMutationFn={async () => {
 							return await AddonApi.Delete(row?.id);
 						}}
-						id={row?.id}
-						editPath={''}
-						isEditDisabled={true}
-						isArchiveDisabled={row?.status === 'archived'}
-						refetchQueryKey={'fetchAddons'}
+						refetchQueryKey='fetchAddons'
 						entityName={row?.name}
-						onEdit={() => onEdit?.(row)}
+						edit={{
+							enabled: false,
+							onClick: () => onEdit?.(row),
+						}}
+						archive={{
+							enabled: row?.status !== ENTITY_STATUS.ARCHIVED,
+						}}
 					/>
 				);
 			},

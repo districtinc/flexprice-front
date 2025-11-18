@@ -73,14 +73,18 @@ const CreditGrantTable: React.FC<Props> = ({ data, onChange, disabled, getEmptyC
 			hideOnEmpty: true,
 			render: (row) => (
 				<ActionButton
-					archiveText='Delete'
 					id={row.id}
 					deleteMutationFn={() => handleDelete(row.id)}
 					refetchQueryKey='credit_grants'
 					entityName={row.name}
-					isEditDisabled={disabled}
-					isArchiveDisabled={disabled}
-					onEdit={() => handleEdit(row)}
+					edit={{
+						enabled: !disabled,
+						onClick: () => handleEdit(row),
+					}}
+					archive={{
+						enabled: !disabled,
+						text: 'Delete',
+					}}
 				/>
 			),
 		},

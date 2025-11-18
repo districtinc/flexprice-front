@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Play, Pause, Trash2, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { TaskApi, ConnectionApi } from '@/api';
+import { ENTITY_STATUS } from '@/models';
 import toast from 'react-hot-toast';
 import ForceRunDrawer from '@/components/molecules/ForceRunDrawer/ForceRunDrawer';
 import TaskRunsTable from '@/components/molecules/TaskRunsTable/TaskRunsTable';
@@ -93,7 +94,7 @@ const ExportDetails = () => {
 		return <Loader />;
 	}
 
-	if (!exportTask || exportTask.status === 'deleted') {
+	if (!exportTask || exportTask.status === ENTITY_STATUS.DELETED) {
 		return (
 			<Page heading='Export Not Found'>
 				<div className='text-center py-12'>

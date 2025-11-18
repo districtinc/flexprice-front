@@ -41,16 +41,18 @@ const CustomerTable: FC<Props> = ({ data, onEdit }) => {
 			fieldVariant: 'interactive',
 			render: (row) => (
 				<ActionButton
-					isArchiveDisabled={row.status === BaseEntityStatus.ARCHIVED}
-					isEditDisabled={row.status === BaseEntityStatus.ARCHIVED}
-					entityName='Customer'
-					refetchQueryKey='fetchCustomers'
-					deleteMutationFn={(id) => CustomerApi.deleteCustomerById(id)}
-					editPath={`/billing/customers/edit-customer?id=${row.id}`}
-					onEdit={() => {
-						onEdit(row);
-					}}
 					id={row.id}
+					deleteMutationFn={(id) => CustomerApi.deleteCustomerById(id)}
+					refetchQueryKey='fetchCustomers'
+					entityName='Customer'
+					edit={{
+						enabled: row.status !== BaseEntityStatus.ARCHIVED,
+						path: `/billing/customers/edit-customer?id=${row.id}`,
+						onClick: () => onEdit(row),
+					}}
+					archive={{
+						enabled: row.status !== BaseEntityStatus.ARCHIVED,
+					}}
 				/>
 			),
 		},

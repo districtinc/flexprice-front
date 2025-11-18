@@ -93,16 +93,19 @@ const TaxTable: FC<Props> = ({ data, onEdit }) => {
 			render(row) {
 				return (
 					<ActionButton
+						id={row?.id}
 						deleteMutationFn={async () => {
 							return await TaxApi.deleteTaxRate(row?.id);
 						}}
-						id={row?.id}
-						editPath={''}
-						isEditDisabled={false}
-						isArchiveDisabled={row?.tax_rate_status === TAX_RATE_STATUS.DELETED}
-						refetchQueryKey={'fetchTaxRates'}
+						refetchQueryKey='fetchTaxRates'
 						entityName={row?.name}
-						onEdit={() => onEdit?.(row)}
+						edit={{
+							enabled: true,
+							onClick: () => onEdit?.(row),
+						}}
+						archive={{
+							enabled: row?.tax_rate_status !== TAX_RATE_STATUS.DELETED,
+						}}
 					/>
 				);
 			},

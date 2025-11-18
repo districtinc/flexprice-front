@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import FlexpriceTable, { ColumnData } from '../Table';
 import CostSheet from '@/models/CostSheet';
+import { ENTITY_STATUS } from '@/models';
 import { ActionButton, Chip } from '@/components/atoms';
 import formatChips from '@/utils/common/format_chips';
 import formatDate from '@/utils/common/format_date';
@@ -43,15 +44,19 @@ const CostSheetTable: FC<Props> = ({ data, onEdit }) => {
 			render(row) {
 				return (
 					<ActionButton
+						id={row?.id}
 						deleteMutationFn={async () => {
 							return await CostSheetApi.DeleteCostSheet(row?.id);
 						}}
-						id={row?.id}
-						isEditDisabled={!onEdit}
-						isArchiveDisabled={row?.status === 'archived'}
-						refetchQueryKey={'fetchCostSheets'}
+						refetchQueryKey='fetchCostSheets'
 						entityName={row?.name}
-						onEdit={() => onEdit?.(row)}
+						edit={{
+							enabled: !!onEdit,
+							onClick: () => onEdit?.(row),
+						}}
+						archive={{
+							enabled: row?.status !== ENTITY_STATUS.ARCHIVED,
+						}}
 					/>
 				);
 			},

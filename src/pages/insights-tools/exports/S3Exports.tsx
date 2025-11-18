@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Settings, Trash2, Eye, BarChart3 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ConnectionApi, TaskApi } from '@/api';
+import { ENTITY_STATUS, CONNECTION_PROVIDER_TYPE } from '@/models';
 import toast from 'react-hot-toast';
 import S3ConnectionDrawer from '@/components/molecules/S3ConnectionDrawer/S3ConnectionDrawer';
 import { ApiDocsContent } from '@/components/molecules';
-import { CONNECTION_PROVIDER_TYPE } from '@/models';
 
 const S3Exports = () => {
 	const navigate = useNavigate();
@@ -37,7 +37,7 @@ const S3Exports = () => {
 							connection_id: connection.id,
 						});
 						// Filter out deleted tasks
-						const activeTasks = response.items.filter((task) => task.status !== 'deleted');
+						const activeTasks = response.items.filter((task) => task.status !== ENTITY_STATUS.DELETED);
 						counts[connection.id] = activeTasks.length;
 					} catch (error) {
 						counts[connection.id] = 0;
