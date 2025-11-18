@@ -67,7 +67,6 @@ const UpcomingCreditGrantApplicationsTable: React.FC<UpcomingCreditGrantApplicat
 					} as ColumnData<CreditGrantApplication>,
 				]
 			: []),
-
 		{
 			title: 'Status',
 			render: (row) => {
