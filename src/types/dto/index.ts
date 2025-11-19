@@ -238,6 +238,8 @@ export {
 
 export { RazorpayWebhookEvents, getDefaultRazorpayWebhookEvents } from '../enums/RazorpayWebhookEvents';
 
+export { ChargebeeWebhookEvents, getDefaultChargebeeWebhookEvents } from '../enums/ChargebeeWebhookEvents';
+
 // Additional DTO types
 export type { Testimonial } from './Testimonial';
 
