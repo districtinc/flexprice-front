@@ -92,6 +92,13 @@ class SubscriptionApi {
 		return await AxiosClient.post(`${this.baseUrl}/${id}/resume`, payload);
 	}
 
+	/**
+	 * Activate draft subscription
+	 */
+	public static async activateSubscription(id: string, payload: { start_date: string }): Promise<SubscriptionResponse> {
+		return await AxiosClient.post<SubscriptionResponse>(`${this.baseUrl}/${id}/activate`, payload);
+	}
+
 	// =============================================================================
 	// USAGE & ANALYTICS METHODS
 	// =============================================================================

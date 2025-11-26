@@ -44,6 +44,7 @@ const CustomerSubscriptionDetailsPage: FC = () => {
 			!!subscriptionDetails &&
 			subscriptionDetails.subscription_status !== SUBSCRIPTION_STATUS.CANCELLED &&
 			subscriptionDetails.subscription_status !== SUBSCRIPTION_STATUS.TRIALING &&
+			subscriptionDetails.subscription_status !== SUBSCRIPTION_STATUS.DRAFT &&
 			!!subscription_id,
 	});
 
@@ -263,7 +264,7 @@ const CustomerSubscriptionDetailsPage: FC = () => {
 				</Card>
 			)}
 
-			{(data?.line_items?.length ?? 0) > 0 && (
+			{subscriptionDetails?.subscription_status !== SUBSCRIPTION_STATUS.DRAFT && (data?.line_items?.length ?? 0) > 0 && (
 				<div className='card !mt-4'>
 					<SubscriptionPreviewLineItemTable
 						discount={data?.total_discount}

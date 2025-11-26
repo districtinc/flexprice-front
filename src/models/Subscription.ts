@@ -175,6 +175,7 @@ export enum SUBSCRIPTION_STATUS {
 	PAST_DUE = 'past_due',
 	TRIALING = 'trialing',
 	UNPAID = 'unpaid',
+	DRAFT = 'draft',
 }
 
 // PaymentBehavior determines how subscription payments are handled
