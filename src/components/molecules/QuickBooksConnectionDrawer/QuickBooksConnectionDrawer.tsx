@@ -5,17 +5,11 @@ import { useMutation } from '@tanstack/react-query';
 import ConnectionApi from '@/api/ConnectionApi';
 import toast from 'react-hot-toast';
 import { CONNECTION_PROVIDER_TYPE, Connection } from '@/models';
-import { CreateConnectionPayload } from '@/types/dto';
 
 interface QuickBooksConnection extends Connection {
 	encrypted_secret_data?: {
-		client_id?: string;
-		client_secret?: string;
-		access_token?: string;
-		refresh_token?: string;
 		realm_id?: string;
 		environment?: 'sandbox' | 'production';
-		token_expires_at?: number;
 		income_account_id?: string;
 	};
 	sync_config?: {
@@ -34,9 +28,7 @@ interface QuickBooksFormData {
 	name: string;
 	client_id: string;
 	client_secret: string;
-	access_token: string;
-	refresh_token: string;
-	realm_id: string;
+	redirect_uri: string;
 	environment: 'sandbox' | 'production';
 	income_account_id: string;
 	sync_config: {
@@ -49,9 +41,7 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 		name: '',
 		client_id: '',
 		client_secret: '',
-		access_token: '',
-		refresh_token: '',
-		realm_id: '',
+		redirect_uri: `${window.location.origin}/tools/integrations/quickbooks/oauth/callback`,
 		environment: 'sandbox',
 		income_account_id: '',
 		sync_config: {
@@ -68,11 +58,9 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 				const syncConfig = connection.sync_config || {};
 				setFormData({
 					name: connection.name || '',
-					client_id: secretData.client_id || '',
-					client_secret: secretData.client_secret || '',
-					access_token: secretData.access_token || '',
-					refresh_token: secretData.refresh_token || '',
-					realm_id: secretData.realm_id || '',
+					client_id: '',
+					client_secret: '',
+					redirect_uri: `${window.location.origin}/tools/integrations/quickbooks/oauth/callback`,
 					environment: (secretData.environment as 'sandbox' | 'production') || 'sandbox',
 					income_account_id: secretData.income_account_id || '',
 					sync_config: {
@@ -84,9 +72,7 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 					name: '',
 					client_id: '',
 					client_secret: '',
-					access_token: '',
-					refresh_token: '',
-					realm_id: '',
+					redirect_uri: `${window.location.origin}/tools/integrations/quickbooks/oauth/callback`,
 					environment: 'sandbox',
 					income_account_id: '',
 					sync_config: {
@@ -120,7 +106,7 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 			newErrors.name = 'Connection name is required';
 		}
 
-		// Only validate secrets when creating new connection
+		// Only validate OAuth credentials when creating new connection
 		if (!connection) {
 			if (!formData.client_id.trim()) {
 				newErrors.client_id = 'Client ID is required';
@@ -128,14 +114,8 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 			if (!formData.client_secret.trim()) {
 				newErrors.client_secret = 'Client secret is required';
 			}
-			if (!formData.access_token.trim()) {
-				newErrors.access_token = 'Access token is required';
-			}
-			if (!formData.refresh_token.trim()) {
-				newErrors.refresh_token = 'Refresh token is required';
-			}
-			if (!formData.realm_id.trim()) {
-				newErrors.realm_id = 'Realm ID is required';
+			if (!formData.redirect_uri.trim()) {
+				newErrors.redirect_uri = 'Redirect URI is required';
 			}
 		}
 
@@ -143,48 +123,6 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
 	};
-
-	const { mutate: createConnection, isPending: isCreating } = useMutation({
-		mutationFn: async () => {
-			const payload: CreateConnectionPayload = {
-				name: formData.name,
-				provider_type: CONNECTION_PROVIDER_TYPE.QUICKBOOKS,
-				encrypted_secret_data: {
-					provider_type: CONNECTION_PROVIDER_TYPE.QUICKBOOKS,
-					client_id: formData.client_id,
-					client_secret: formData.client_secret,
-					access_token: formData.access_token,
-					refresh_token: formData.refresh_token,
-					realm_id: formData.realm_id,
-					environment: formData.environment,
-					income_account_id: formData.income_account_id || undefined,
-				},
-				sync_config: {},
-			};
-
-			// Only add invoice config if toggle is true
-			if (formData.sync_config.invoice) {
-				payload.sync_config = {
-					...payload.sync_config,
-					invoice: {
-						inbound: false,
-						outbound: true,
-					},
-				};
-			}
-
-			return await ConnectionApi.Create(payload);
-		},
-		onSuccess: (response) => {
-			toast.success('QuickBooks connection created successfully');
-			onSave(response);
-			onOpenChange(false);
-		},
-		onError: (error: unknown) => {
-			const errorMessage = error instanceof Error ? error.message : 'Failed to create connection';
-			toast.error(errorMessage);
-		},
-	});
 
 	const { mutate: updateConnection, isPending: isUpdating } = useMutation({
 		mutationFn: async () => {
@@ -232,12 +170,53 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 			if (connection) {
 				updateConnection();
 			} else {
-				createConnection();
+				// For new connections, initiate OAuth flow
+				initiateOAuth();
 			}
 		}
 	};
 
-	const isPending = isCreating || isUpdating;
+	const initiateOAuth = () => {
+		// Store form data in sessionStorage to retrieve after OAuth callback
+		sessionStorage.setItem(
+			'qb_connection_data',
+			JSON.stringify({
+				name: formData.name,
+				client_id: formData.client_id,
+				client_secret: formData.client_secret,
+				redirect_uri: formData.redirect_uri,
+				environment: formData.environment,
+				income_account_id: formData.income_account_id,
+				sync_config: formData.sync_config,
+			}),
+		);
+
+		// Generate state for CSRF protection
+		const state = generateState();
+		sessionStorage.setItem('qb_oauth_state', state);
+
+		// Build OAuth URL
+		const scope = 'com.intuit.quickbooks.accounting';
+		const responseType = 'code';
+
+		const authUrl =
+			`https://appcenter.intuit.com/connect/oauth2?` +
+			`client_id=${encodeURIComponent(formData.client_id)}` +
+			`&scope=${encodeURIComponent(scope)}` +
+			`&redirect_uri=${encodeURIComponent(formData.redirect_uri)}` +
+			`&response_type=${responseType}` +
+			`&state=${state}`;
+
+		// Close drawer and redirect to QuickBooks OAuth
+		onOpenChange(false);
+		window.location.href = authUrl;
+	};
+
+	const generateState = (): string => {
+		return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+	};
+
+	const isPending = isUpdating;
 
 	return (
 		<Sheet
@@ -245,7 +224,9 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 			onOpenChange={onOpenChange}
 			title={connection ? 'Edit QuickBooks Connection' : 'Connect to QuickBooks'}
 			description={
-				connection ? 'Update your QuickBooks connection settings.' : 'Configure your QuickBooks integration with the required credentials.'
+				connection
+					? 'Update your QuickBooks connection settings.'
+					: 'Configure your QuickBooks integration. You will be redirected to QuickBooks to authorize the connection.'
 			}
 			size='lg'>
 			<div className='space-y-6 mt-4'>
@@ -268,7 +249,7 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 						value={formData.client_id}
 						onChange={(value) => handleChange('client_id', value)}
 						error={errors.client_id}
-						description='Your QuickBooks OAuth Client ID from the Developer Dashboard'
+						description='Your QuickBooks OAuth Client ID from the Developer Dashboard (Keys & Credentials tab)'
 					/>
 				)}
 
@@ -281,45 +262,19 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 						value={formData.client_secret}
 						onChange={(value) => handleChange('client_secret', value)}
 						error={errors.client_secret}
-						description='Your QuickBooks OAuth Client Secret from the Developer Dashboard'
+						description='Your QuickBooks OAuth Client Secret from the Developer Dashboard (Keys & Credentials tab)'
 					/>
 				)}
 
-				{/* Access Token */}
+				{/* Redirect URI */}
 				{!connection && (
 					<Input
-						label='Access Token'
-						placeholder='Enter your QuickBooks Access Token'
-						type='password'
-						value={formData.access_token}
-						onChange={(value) => handleChange('access_token', value)}
-						error={errors.access_token}
-						description='Your QuickBooks OAuth Access Token'
-					/>
-				)}
-
-				{/* Refresh Token */}
-				{!connection && (
-					<Input
-						label='Refresh Token'
-						placeholder='Enter your QuickBooks Refresh Token'
-						type='password'
-						value={formData.refresh_token}
-						onChange={(value) => handleChange('refresh_token', value)}
-						error={errors.refresh_token}
-						description='Your QuickBooks OAuth Refresh Token'
-					/>
-				)}
-
-				{/* Realm ID */}
-				{!connection && (
-					<Input
-						label='Realm ID (Company ID)'
-						placeholder='Enter your QuickBooks Company ID'
-						value={formData.realm_id}
-						onChange={(value) => handleChange('realm_id', value)}
-						error={errors.realm_id}
-						description='Your QuickBooks Company ID (Realm ID)'
+						label='Redirect URI'
+						placeholder='https://yourdomain.com/tools/integrations/quickbooks/oauth/callback'
+						value={formData.redirect_uri}
+						onChange={(value) => handleChange('redirect_uri', value)}
+						error={errors.redirect_uri}
+						description='OAuth callback URL. This MUST match exactly what you configured in QuickBooks Developer Dashboard under Redirect URIs'
 					/>
 				)}
 
@@ -382,6 +337,17 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 					</div>
 				</div>
 
+				{/* OAuth Info Box */}
+				{!connection && (
+					<div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+						<h3 className='text-sm font-medium text-blue-800 mb-2'>OAuth Authorization Required</h3>
+						<p className='text-xs text-blue-700'>
+							After clicking "Connect to QuickBooks", you will be redirected to QuickBooks to authorize this connection. Make sure you have
+							the Client ID and Client Secret ready from your QuickBooks Developer Dashboard.
+						</p>
+					</div>
+				)}
+
 				{/* Connection Info (when editing) */}
 				{connection && (
 					<div className='p-4 bg-gray-50 border border-gray-200 rounded-lg'>
@@ -409,7 +375,7 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 						Cancel
 					</Button>
 					<Button onClick={handleSave} className='flex-1' isLoading={isPending} disabled={isPending}>
-						{connection ? 'Update Connection' : 'Create Connection'}
+						{connection ? 'Update Connection' : 'Connect to QuickBooks'}
 					</Button>
 				</div>
 			</div>

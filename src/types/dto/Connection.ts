@@ -53,11 +53,10 @@ export interface CreateConnectionPayload {
 				provider_type: CONNECTION_PROVIDER_TYPE.QUICKBOOKS;
 				client_id?: string;
 				client_secret?: string;
-				access_token?: string;
-				refresh_token?: string;
+				auth_code?: string;
+				redirect_uri?: string;
 				realm_id?: string;
 				environment?: 'sandbox' | 'production';
-				token_expires_at?: number;
 				income_account_id?: string;
 		  };
 	sync_config?: {
