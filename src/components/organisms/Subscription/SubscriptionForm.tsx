@@ -584,7 +584,7 @@ const SubscriptionForm = ({
 					</div>
 					{/* Enable True Up */}
 					<div className='flex flex-col space-y-2 mt-4'>
-						<Label label='Enable True Up' />
+						<Label label='Enable True-up fee' />
 						<Switch
 							checked={state.enable_true_up}
 							onCheckedChange={(checked) => setState((prev) => ({ ...prev, enable_true_up: checked }))}

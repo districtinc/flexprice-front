@@ -13,7 +13,16 @@ import { refetchQueries } from '@/core/services/tanstack/ReactQueryProvider';
 import { RouteNames } from '@/core/routes/Routes';
 import { ServerError } from '@/core/axios/types';
 
-import { BILLING_CADENCE, SubscriptionPhase, Coupon, TAXRATE_ENTITY_TYPE, EXPAND, BILLING_CYCLE, INVOICE_BILLING } from '@/models';
+import {
+	BILLING_CADENCE,
+	SubscriptionPhase,
+	Coupon,
+	TAXRATE_ENTITY_TYPE,
+	EXPAND,
+	BILLING_CYCLE,
+	INVOICE_BILLING,
+	SUBSCRIPTION_STATUS,
+} from '@/models';
 import { InternalCreditGrantRequest, creditGrantToInternal, internalToCreateRequest } from '@/types/dto/CreditGrant';
 import { BILLING_PERIOD } from '@/constants/constants';
 
@@ -275,7 +284,7 @@ const CreateCustomerSubscriptionPage: React.FC = () => {
 			return await SubscriptionApi.createSubscription(data);
 		},
 		onSuccess: async (_, variables) => {
-			const isDraft = variables.subscription_status === 'draft';
+			const isDraft = variables.subscription_status === SUBSCRIPTION_STATUS.DRAFT;
 			toast.success(isDraft ? 'Draft subscription saved successfully' : 'Subscription created successfully');
 
 			refetchQueries(['debug-customers']);
@@ -400,7 +409,7 @@ const CreateCustomerSubscriptionPage: React.FC = () => {
 			override_entitlements: Object.keys(entitlementOverrides).length > 0 ? Object.values(entitlementOverrides) : undefined,
 			credit_grants: creditGrants.length > 0 ? creditGrants.map(internalToCreateRequest) : undefined,
 			enable_true_up: subscriptionState.enable_true_up,
-			subscription_status: isDraftParam ? 'draft' : undefined,
+			subscription_status: isDraftParam ? SUBSCRIPTION_STATUS.DRAFT : undefined,
 			invoice_billing: invoiceBillingConfig,
 		};
 
