@@ -183,12 +183,14 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 		const state = generateState();
 
 		// Store form data in sessionStorage to retrieve after OAuth callback
+		// NOTE: This includes sensitive data (client_secret) but is necessary for the OAuth flow
+		// The data is cleared immediately after connection creation in the callback
 		sessionStorage.setItem(
 			'qb_connection_data',
 			JSON.stringify({
 				name: formData.name,
 				client_id: formData.client_id,
-				client_secret: formData.client_secret,
+				client_secret: formData.client_secret, // Temporary storage, cleared after use
 				redirect_uri: redirectUri,
 				environment: formData.environment,
 				income_account_id: formData.income_account_id,
@@ -198,7 +200,7 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 
 		sessionStorage.setItem('qb_oauth_state', state);
 
-		// Debug logging
+		// Debug logging (without sensitive data)
 		console.log('🚀 Initiating QuickBooks OAuth:', {
 			state,
 			storedState: sessionStorage.getItem('qb_oauth_state'),
@@ -224,7 +226,10 @@ const QuickBooksConnectionDrawer: FC<QuickBooksConnectionDrawerProps> = ({ isOpe
 	};
 
 	const generateState = (): string => {
-		return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+		// Use cryptographically secure random generation
+		const array = new Uint8Array(16);
+		crypto.getRandomValues(array);
+		return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
 	};
 
 	const isPending = isUpdating;
