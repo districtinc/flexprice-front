@@ -36,7 +36,6 @@ export { DashboardControls, RecentSubscriptionsCard, RevenueTrendCard, InvoiceIs
 export { CreateCustomerDrawer, CustomerCard, CustomerTable } from './Customer';
 export { default as CustomerHeader } from './Customer/CustomerHeader';
 export { default as CustomerUsageTable } from './CustomerUsageTable';
-export { default as CustomerEntitlementTable } from './CustomerUsageTable';
 
 // Subscription Management
 export { SubscriptionTable } from './SubscriptionTable';
