@@ -42,6 +42,19 @@ const formatNumber = (value: number): string => {
 	return value.toString();
 };
 
+/**
+ * Format lag time in a human-readable format
+ */
+const formatLag = (lagMs: number): string => {
+	if (lagMs < 1000) {
+		return `${lagMs}ms`;
+	}
+	if (lagMs < 60000) {
+		return `${(lagMs / 1000).toFixed(1)}s`;
+	}
+	return `${(lagMs / 60000).toFixed(1)}m`;
+};
+
 interface EventsMonitoringChartProps {
 	data: GetMonitoringDataResponse;
 	title?: string;
@@ -58,19 +71,9 @@ export const EventsMonitoringChart: React.FC<EventsMonitoringChartProps> = ({
 	// Process the data for chart display
 	const chartData = normalizeMonitoringData(data);
 
-	// If no data, show empty state
-	if (chartData.length === 0) {
-		return (
-			<Card className={`py-4 sm:py-0 ${className || ''}`}>
-				<CardHeader>
-					<CardTitle>{title}</CardTitle>
-				</CardHeader>
-				<CardContent className='flex items-center justify-center h-[250px]'>
-					<p className='text-muted-foreground'>No data to display</p>
-				</CardContent>
-			</Card>
-		);
-	}
+	// Create empty chart data if no data points exist
+	const hasData = chartData.length > 0;
+	const displayData = hasData ? chartData : [{ timestamp: new Date().toISOString(), event_count: 0, date: new Date().toISOString() }];
 
 	return (
 		<Card className={`py-2 sm:py-0 shadow-none ${className || ''}`}>
@@ -80,13 +83,32 @@ export const EventsMonitoringChart: React.FC<EventsMonitoringChartProps> = ({
 						<CardTitle className='text-base font-medium'>{title}</CardTitle>
 						<CardDescription className='text-xs text-gray-500'>{description}</CardDescription>
 					</div>
+
+					{/* Show metrics only if we have data */}
+					{hasData && (
+						<div className='flex flex-wrap gap-4 text-xs'>
+							<div className='flex flex-col items-center px-3 py-2 bg-blue-50 rounded-lg border border-blue-100'>
+								<span className='text-blue-600 font-medium'>{formatNumber(data.total_count)}</span>
+								<span className='text-blue-500'>Total Events</span>
+							</div>
+							<div className='flex flex-col items-center px-3 py-2 bg-orange-50 rounded-lg border border-orange-100'>
+								<span className='text-orange-600 font-medium'>{formatLag(data.consumption_lag)}</span>
+								<span className='text-orange-500'>Consumption Lag</span>
+							</div>
+							<div className='flex flex-col items-center px-3 py-2 bg-purple-50 rounded-lg border border-purple-100'>
+								<span className='text-purple-600 font-medium'>{formatLag(data.post_processing_lag)}</span>
+								<span className='text-purple-500'>Processing Lag</span>
+							</div>
+						</div>
+					)}
 				</div>
 			</CardHeader>
 
 			<CardContent className='px-2 sm:px-6 pt-0 pb-4'>
+				{/* Show "No data" message overlay when there's no data */}
 				<div className='relative' style={{ width: '100%', height: 300 }}>
 					<ResponsiveContainer width='100%' height='100%'>
-						<AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+						<AreaChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
 							<defs>
 								<linearGradient id='eventCountGradient' x1='0' y1='0' x2='0' y2='1'>
 									<stop offset='5%' stopColor='rgba(99, 102, 241, 0.8)' stopOpacity={0.8} />
@@ -121,10 +143,10 @@ export const EventsMonitoringChart: React.FC<EventsMonitoringChartProps> = ({
 								tickFormatter={formatNumber}
 							/>
 							<Tooltip
-								cursor={{ stroke: 'rgba(99, 102, 241, 0.4)', strokeWidth: 1, strokeDasharray: '3 3' }}
+								cursor={hasData ? { stroke: 'rgba(99, 102, 241, 0.4)', strokeWidth: 1, strokeDasharray: '3 3' } : false}
 								content={(props) => {
 									const { active, payload, label } = props;
-									if (!active || !payload || !payload.length) return null;
+									if (!active || !payload || !payload.length || !hasData) return null;
 
 									const data = payload[0]?.payload;
 									if (!data) return null;
@@ -191,17 +213,21 @@ export const EventsMonitoringChart: React.FC<EventsMonitoringChartProps> = ({
 							<Area
 								type='monotone'
 								dataKey='event_count'
-								stroke='rgba(99, 102, 241, 0.8)'
+								stroke={hasData ? 'rgba(99, 102, 241, 0.8)' : 'rgba(156, 163, 175, 0.3)'}
 								strokeWidth={2}
-								fill='url(#eventCountGradient)'
+								fill={hasData ? 'url(#eventCountGradient)' : 'rgba(243, 244, 246, 0.2)'}
 								dot={false}
-								activeDot={{
-									r: 4,
-									stroke: '#fff',
-									strokeWidth: 2,
-									fill: 'rgba(99, 102, 241, 0.8)',
-								}}
-								isAnimationActive={true}
+								activeDot={
+									hasData
+										? {
+												r: 4,
+												stroke: '#fff',
+												strokeWidth: 2,
+												fill: 'rgba(99, 102, 241, 0.8)',
+											}
+										: false
+								}
+								isAnimationActive={hasData}
 								animationDuration={800}
 								animationEasing='ease-out'
 							/>
