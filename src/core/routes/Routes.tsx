@@ -158,10 +158,7 @@ const DefaultRoute = () => {
 	const { user } = useUser();
 	const onboardingMetadata = user?.tenant?.metadata?.[TenantMetadataKey.ONBOARDING_COMPLETED];
 	const onboardingCompleted = onboardingMetadata === 'true';
-	if (onboardingCompleted) {
-		return <Navigate to={RouteNames.pricing} />;
-	}
-	return <Navigate to={RouteNames.onboarding} />;
+	return <Navigate to={onboardingCompleted ? RouteNames.pricing : RouteNames.onboarding} />;
 };
 
 export const MainRouter = createBrowserRouter([
