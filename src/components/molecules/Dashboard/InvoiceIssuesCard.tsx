@@ -37,7 +37,7 @@ export const InvoiceIssuesCard: React.FC<InvoiceIssuesCardProps> = ({ invoicesBy
 			<CardHeader className='pb-8'>
 				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
 					<div>
-						<CardTitle className={getTypographyClass('section-title')}>Invoice Payment Status</CardTitle>
+						<CardTitle className={getTypographyClass('section-title', 'font-medium')}>Invoice Payment Status</CardTitle>
 						<CardDescription className={getTypographyClass('helper-text', 'mt-1')}>Requires attention (last 7 days)</CardDescription>
 					</div>
 				</div>

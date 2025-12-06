@@ -4,6 +4,7 @@ import { Loader } from '@/components/atoms';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { getTypographyClass } from '@/lib/typography';
+import { CalendarClock } from 'lucide-react';
 
 interface SubscriptionsByPlan {
 	count: number;
@@ -23,8 +24,8 @@ export const RecentSubscriptionsCard: React.FC<RecentSubscriptionsCardProps> = (
 			<CardHeader className='pb-8'>
 				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
 					<div>
-						<CardTitle className={getTypographyClass('section-title')}>Recent Subscriptions</CardTitle>
-						<CardDescription className={getTypographyClass('helper-text', 'mt-1')}>Created in last 24 hours</CardDescription>
+						<CardTitle className={getTypographyClass('section-title', 'font-medium')}>Recent Subscriptions</CardTitle>
+						<CardDescription className={getTypographyClass('helper-text', 'mt-1')}>Created in the last 7 days</CardDescription>
 					</div>
 				</div>
 			</CardHeader>
@@ -35,8 +36,12 @@ export const RecentSubscriptionsCard: React.FC<RecentSubscriptionsCardProps> = (
 					</div>
 				) : (
 					<>
+						<div className='mb-8'>
+							<p className='text-4xl font-bold text-zinc-900'>{subscriptionsCount}</p>
+							<p className={getTypographyClass('body-small', 'text-zinc-600 mt-2')}>New subscriptions</p>
+						</div>
 						{subscriptionsByPlan.length > 0 ? (
-							<div className='mb-8'>
+							<div>
 								<ResponsiveContainer width='100%' height={180}>
 									<PieChart>
 										<Pie
@@ -71,20 +76,20 @@ export const RecentSubscriptionsCard: React.FC<RecentSubscriptionsCardProps> = (
 											verticalAlign='bottom'
 											height={36}
 											iconType='circle'
+											wrapperStyle={{ paddingTop: '24px' }}
 											formatter={(value) => <span className={getTypographyClass('helper-text', 'text-zinc-600')}>{value}</span>}
 										/>
 									</PieChart>
 								</ResponsiveContainer>
 							</div>
 						) : (
-							<p className={getTypographyClass('body-small', 'text-center text-zinc-500 py-6 mb-8')}>
-								No subscriptions created in the last 24 hours
-							</p>
+							<div className='flex flex-col items-center py-6'>
+								<CalendarClock className='w-8 h-8 text-zinc-300 mb-3' />
+								<p className={getTypographyClass('body-small', 'text-center text-zinc-400')}>
+									No subscriptions created in the last 24 hours
+								</p>
+							</div>
 						)}
-						<div>
-							<p className='text-4xl font-bold text-zinc-900'>{subscriptionsCount}</p>
-							<p className={getTypographyClass('body-small', 'text-zinc-600 mt-2')}>New subscriptions</p>
-						</div>
 					</>
 				)}
 			</CardContent>

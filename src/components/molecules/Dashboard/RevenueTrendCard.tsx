@@ -22,7 +22,7 @@ export const RevenueTrendCard: React.FC<RevenueTrendCardProps> = ({ revenueData,
 			<CardHeader className='pb-2'>
 				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
 					<div>
-						<CardTitle className={getTypographyClass('section-title')}>Revenue Trend</CardTitle>
+						<CardTitle className={getTypographyClass('section-title', 'font-medium')}>Revenue Trend</CardTitle>
 						<CardDescription className={getTypographyClass('helper-text', 'mt-1')}>Last 3 months</CardDescription>
 					</div>
 				</div>
@@ -44,13 +44,15 @@ export const RevenueTrendCard: React.FC<RevenueTrendCardProps> = ({ revenueData,
 										<p className={getTypographyClass('body-default', 'font-medium text-zinc-900')}>{month.month}</p>
 									</div>
 									<div className='text-right'>
-										<p className='text-lg font-semibold text-zinc-900'>
-											{new Intl.NumberFormat('en-US', {
-												style: 'currency',
-												currency: month.currency,
-												minimumFractionDigits: 0,
-												maximumFractionDigits: 0,
-											}).format(month.revenue)}
+										<p className={`text-lg font-semibold ${month.revenue === 0 ? 'text-zinc-400' : 'text-zinc-900'}`}>
+											{month.revenue === 0
+												? '--'
+												: new Intl.NumberFormat('en-US', {
+														style: 'currency',
+														currency: month.currency,
+														minimumFractionDigits: 0,
+														maximumFractionDigits: 0,
+													}).format(month.revenue)}
 										</p>
 									</div>
 								</div>
