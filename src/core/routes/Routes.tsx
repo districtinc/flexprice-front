@@ -71,6 +71,7 @@ import {
 	ExportManagement,
 	ExportDetails,
 	TaskRunsPage,
+	QuickBooksOAuthCallback,
 	// Error pages
 	ErrorPage,
 	DashboardPage,
@@ -147,6 +148,8 @@ export const RouteNames = {
 	bulkImports: '/tools/bulk-imports',
 	integrations: '/tools/integrations',
 	integrationDetails: '/tools/integrations',
+	oauthCallback: '/tools/integrations/oauth/callback', // Generic OAuth callback (backend redirect URI)
+	quickBooksOAuthCallback: '/tools/integrations/quickbooks/oauth/callback', // Legacy route
 	exports: '/tools/exports',
 	s3Exports: '/tools/exports/s3',
 	s3ExportManagement: '/tools/exports/s3/:connectionId/export',
@@ -428,6 +431,14 @@ export const MainRouter = createBrowserRouter([
 					{
 						path: `${RouteNames.integrationDetails}/:id`,
 						element: <IntegrationDetails />,
+					},
+					{
+						path: RouteNames.oauthCallback,
+						element: <QuickBooksOAuthCallback />,
+					},
+					{
+						path: RouteNames.quickBooksOAuthCallback,
+						element: <QuickBooksOAuthCallback />,
 					},
 					{
 						path: RouteNames.bulkImports,

@@ -2,6 +2,7 @@
 export { default as IntegrationDetails } from './integrations/IntegrationDetails';
 export { default as Integrations } from './integrations/Integrations';
 export { integrations } from './integrations/integrationsData';
+export { default as QuickBooksOAuthCallback } from './integrations/QuickBooksOAuthCallback';
 
 // Exports
 export { default as Exports } from './exports/Exports';
