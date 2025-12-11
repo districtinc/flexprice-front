@@ -184,6 +184,78 @@ export const integrations: Integration[] = [
 			},
 		],
 	},
+	{
+		name: 'QuickBooks',
+		description: 'Sync plans, customers, and invoices from Flexprice to QuickBooks Online for seamless accounting operations.',
+		logo: '/assets/company-logo/quickbooks.svg',
+		tags: ['Accounting', 'Invoices'],
+		type: 'available',
+		info: [
+			{
+				title: 'Overview',
+				description: [
+					'The Flexprice QuickBooks integration enables one-way sync from Flexprice to QuickBooks Online. Automatically sync plans, customers, and invoices to keep your accounting system up to date.',
+				],
+			},
+			{
+				title: 'Plan/Price Sync',
+				description: [
+					'Automatically create QuickBooks Items (Service type) when plans are created in Flexprice. Each price is mapped to a QuickBooks Item for accurate invoice line items.',
+				],
+			},
+			{
+				title: 'Customer Sync',
+				description: [
+					'Customers are automatically created in QuickBooks when invoices are synced. Customer data including name, email, and billing address is synchronized.',
+				],
+			},
+			{
+				title: 'Invoice Sync',
+				description: [
+					'Automatically sync invoices from Flexprice to QuickBooks Online. Invoice line items are mapped to QuickBooks Items, ensuring accurate accounting records.',
+				],
+			},
+			{
+				title: 'Automatic Token Refresh',
+				description: [
+					'OAuth tokens are automatically refreshed by the backend when they expire, ensuring uninterrupted sync operations without manual intervention.',
+				],
+			},
+		],
+	},
+	{
+		name: 'Nomod',
+		description: 'Send invoices and collect payments using payment links through Nomod integration.',
+		logo: '/assets/logo/nomod-logo.svg',
+		tags: ['Payments', 'Invoices'],
+		type: 'available',
+		info: [
+			{
+				title: 'Overview',
+				description: [
+					'The Flexprice Nomod app enables invoicing and payment collection through Nomod payment links. Integrate it seamlessly with Flexprice to streamline your payment workflows.',
+				],
+			},
+			{
+				title: 'Invoice Sync',
+				description: [
+					'Create and send invoices with payment links through Nomod directly from Flexprice. Payment collection can be automated through Nomod payment links.',
+				],
+			},
+			{
+				title: 'Payment Links',
+				description: [
+					'Generate secure payment links for your invoices using Nomod. Your customers can pay quickly and securely through various payment methods supported by Nomod.',
+				],
+			},
+			{
+				title: 'Webhook Integration',
+				description: [
+					'Receive real-time notifications about invoice and payment link events through webhooks. Stay updated on payment status, invoice creation, and more.',
+				],
+			},
+		],
+	},
 ];
 
 export const installedIntegrations = integrations.filter((integration) => integration.type === 'installed');
