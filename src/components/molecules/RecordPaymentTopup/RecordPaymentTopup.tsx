@@ -1,9 +1,8 @@
 import { Button, Input, Select, Textarea, PaymentUrlSuccessDialog, DatePicker, Dialog } from '@/components/atoms';
-import { FC, useState, useEffect, useMemo } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { getCurrencySymbol } from '@/utils/common/helper_functions';
 import { PAYMENT_METHOD_TYPE, PAYMENT_DESTINATION_TYPE, Payment } from '@/models/Payment';
 import PaymentApi from '@/api/PaymentApi';
-import WalletApi from '@/api/WalletApi';
 import ConnectionApi from '@/api/ConnectionApi';
 import { RecordPaymentPayload } from '@/types/dto/Payment';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -17,7 +16,6 @@ interface Props {
 	onOpenChange: (value: boolean) => void;
 	destination_id: string;
 	destination_type: PAYMENT_DESTINATION_TYPE;
-	customer_id: string;
 	max_amount?: number;
 	currency: string;
 	onSuccess?: (payment: Payment) => void;
@@ -28,7 +26,6 @@ interface ValidationErrors {
 	payment_method_type?: string;
 	reference_id?: string;
 	description?: string;
-	wallet_id?: string;
 	selected_connection_id?: string;
 	recorded_at?: string;
 }
@@ -38,21 +35,11 @@ interface PaymentFormData {
 	payment_method_type: PAYMENT_METHOD_TYPE | '';
 	reference_id?: string;
 	description?: string;
-	wallet_id?: string;
 	selected_connection_id?: string;
 	recorded_at?: Date;
 }
 
-const RecordPaymentTopup: FC<Props> = ({
-	isOpen,
-	onOpenChange,
-	destination_id,
-	destination_type,
-	customer_id,
-	max_amount,
-	currency,
-	onSuccess,
-}) => {
+const RecordPaymentTopup: FC<Props> = ({ isOpen, onOpenChange, destination_id, destination_type, max_amount, currency, onSuccess }) => {
 	const [formData, setFormData] = useState<PaymentFormData>({
 		amount: max_amount || 0,
 		payment_method_type: '',
@@ -64,12 +51,6 @@ const RecordPaymentTopup: FC<Props> = ({
 		isCopied: false,
 	});
 
-	const { data: wallets } = useQuery({
-		queryKey: ['customerWallets', customer_id],
-		queryFn: () => WalletApi.getCustomerWallets({ id: customer_id }),
-		enabled: !!customer_id && formData.payment_method_type === PAYMENT_METHOD_TYPE.CREDITS,
-	});
-
 	const { data: connectionsResponse } = useQuery({
 		queryKey: ['connections', 'published'],
 		queryFn: () => ConnectionApi.ListPublished(),
@@ -78,23 +59,8 @@ const RecordPaymentTopup: FC<Props> = ({
 
 	const availableConnections = connectionsResponse?.connections || [];
 
-	const filteredWallets = useMemo(() => wallets?.filter((wallet) => wallet.currency === currency) || [], [wallets, currency]);
-	const walletOptions = filteredWallets.map((wallet) => ({
-		label: `${wallet.name || 'Unnamed Wallet'} (${getCurrencySymbol(wallet.currency)}${wallet.balance || 0})`,
-		value: wallet.id,
-	}));
-	const selectOptions =
-		filteredWallets.length > 1 ? [{ label: 'From all wallets', value: '__auto_select__' }, ...walletOptions] : walletOptions;
-
-	useEffect(() => {
-		if (formData.payment_method_type === PAYMENT_METHOD_TYPE.CREDITS && filteredWallets.length === 1) {
-			setFormData((prev) => ({ ...prev, wallet_id: filteredWallets[0].id }));
-		}
-	}, [filteredWallets, formData.payment_method_type]);
-
 	const paymentMethodOptions = [
 		{ label: 'Offline', value: PAYMENT_METHOD_TYPE.OFFLINE, description: 'Record payment that was processed outside the system' },
-		{ label: 'Credits', value: PAYMENT_METHOD_TYPE.CREDITS, description: 'Pay using customer wallet balance' },
 		...(availableConnections.length > 0
 			? [{ label: 'Payment Link', value: PAYMENT_METHOD_TYPE.PAYMENT_LINK, description: 'Generate a payment link for online payment' }]
 			: []),
@@ -122,7 +88,6 @@ const RecordPaymentTopup: FC<Props> = ({
 				payment_method_type: '',
 				reference_id: '',
 				description: '',
-				wallet_id: '',
 				selected_connection_id: '',
 				recorded_at: undefined,
 			});
@@ -156,11 +121,6 @@ const RecordPaymentTopup: FC<Props> = ({
 			case PAYMENT_METHOD_TYPE.CARD:
 			case PAYMENT_METHOD_TYPE.ACH:
 				newErrors.payment_method_type = 'This payment method is not available yet';
-				break;
-			case PAYMENT_METHOD_TYPE.CREDITS:
-				if (filteredWallets.length === 0) {
-					newErrors.wallet_id = `No ${currency} wallets available. Please create a wallet first.`;
-				}
 				break;
 		}
 
@@ -197,9 +157,6 @@ const RecordPaymentTopup: FC<Props> = ({
 				destination_type,
 				payment_method_type: formData.payment_method_type as PAYMENT_METHOD_TYPE,
 				process_payment: true,
-				...(formData.payment_method_type === PAYMENT_METHOD_TYPE.CREDITS && {
-					payment_method_id: formData.wallet_id || '',
-				}),
 				...(formData.payment_method_type === PAYMENT_METHOD_TYPE.OFFLINE &&
 					formData.recorded_at && {
 						recorded_at: formData.recorded_at,
@@ -212,7 +169,6 @@ const RecordPaymentTopup: FC<Props> = ({
 				metadata: {
 					...(formData.description?.trim() && { description: formData.description.trim() }),
 					...(formData.payment_method_type === PAYMENT_METHOD_TYPE.OFFLINE && { reference_id: formData.reference_id }),
-					...(formData.payment_method_type === PAYMENT_METHOD_TYPE.CREDITS && formData.wallet_id && { wallet_id: formData.wallet_id }),
 					...(selectedConnection && { connection_id: selectedConnection.id, connection_name: selectedConnection.name }),
 					...paymentUrls,
 				},
@@ -300,28 +256,6 @@ const RecordPaymentTopup: FC<Props> = ({
 						{descriptionField}
 					</div>
 				);
-			case PAYMENT_METHOD_TYPE.CREDITS:
-				return (
-					<div className='space-y-3'>
-						<Select
-							label='Wallet'
-							placeholder={
-								filteredWallets.length === 0
-									? 'No wallets available with matching currency'
-									: filteredWallets.length === 1
-										? 'Wallet auto-selected'
-										: 'Choose a wallet or auto-select'
-							}
-							options={selectOptions}
-							value={formData.wallet_id || (filteredWallets.length > 1 ? '__auto_select__' : '')}
-							onChange={(value) => setFormData({ ...formData, wallet_id: value === '__auto_select__' ? '' : value })}
-							error={errors.wallet_id}
-							description='Select a specific wallet or let the system choose from all wallets.'
-							disabled={filteredWallets.length === 0}
-						/>
-						{descriptionField}
-					</div>
-				);
 			case PAYMENT_METHOD_TYPE.CARD:
 			case PAYMENT_METHOD_TYPE.ACH:
 				return (
@@ -329,7 +263,7 @@ const RecordPaymentTopup: FC<Props> = ({
 						<div className='p-4 bg-gray-50 border border-gray-200 rounded-lg'>
 							<div className='text-sm text-gray-600'>
 								<span className='font-medium'>{formData.payment_method_type}</span> payment processing is not available yet. Please use
-								offline payment method or credits instead.
+								offline payment method instead.
 							</div>
 						</div>
 					</div>
@@ -373,7 +307,6 @@ const RecordPaymentTopup: FC<Props> = ({
 								selected_connection_id: '',
 								reference_id: '',
 								description: '',
-								wallet_id: '',
 								recorded_at: undefined,
 							});
 						}}

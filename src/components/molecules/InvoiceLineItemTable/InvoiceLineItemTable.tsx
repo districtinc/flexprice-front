@@ -19,6 +19,7 @@ interface Props {
 	refetch?: () => void;
 	subtitle?: string;
 	invoiceType?: INVOICE_TYPE;
+	total_credits_applied?: number;
 }
 
 const formatToShortDate = (dateString: string): string => {
@@ -55,6 +56,7 @@ const InvoiceLineItemTable: FC<Props> = ({
 	amount_paid,
 	amount_remaining,
 	subtotal,
+	total_credits_applied,
 }) => {
 	const [showZeroCharges, setShowZeroCharges] = useState(false);
 	const filteredData = data.filter((item) => showZeroCharges || Number(item.amount) !== 0);
@@ -141,6 +143,15 @@ const InvoiceLineItemTable: FC<Props> = ({
 							<div className='flex flex-row justify-end items-center py-1'>
 								<div className='w-40 text-right text-sm font-medium text-gray-900'>Discount</div>
 								<div className='flex-1 text-right text-sm text-gray-900 font-medium'>−{formatAmount(Number(discount), currency ?? '')}</div>
+							</div>
+						)}
+
+						{total_credits_applied !== undefined && total_credits_applied !== null && Number(total_credits_applied) !== 0 && (
+							<div className='flex flex-row justify-end items-center py-1'>
+								<div className='w-40 text-right text-sm font-medium text-gray-900'>Credits applied</div>
+								<div className='flex-1 text-right text-sm text-gray-900 font-medium'>
+									- {formatAmount(Number(total_credits_applied), currency ?? '')}
+								</div>
 							</div>
 						)}
 

@@ -183,6 +183,7 @@ const CustomerInvoiceDetail: FC<Props> = ({ invoice_id, breadcrumb_index }) => {
 						amount_due={data?.amount_due}
 						currency={data?.currency}
 						invoiceType={invoiceType as INVOICE_TYPE}
+						total_credits_applied={Number(data?.total_credits_applied)}
 					/>
 				</div>
 			</div>

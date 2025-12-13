@@ -3,6 +3,7 @@ import Customer from './Customer';
 import { Subscription } from './Subscription';
 import { PAYMENT_STATUS } from '@/constants/payment';
 import { TaxApplied } from './Tax';
+import Decimal from 'decimal.js';
 
 export interface Invoice extends BaseModel {
 	readonly customer_id: string;
@@ -36,6 +37,7 @@ export interface Invoice extends BaseModel {
 	readonly customer?: Customer;
 	readonly total_discount?: number;
 	readonly taxes?: TaxApplied[];
+	readonly total_credits_applied?: Decimal;
 }
 
 export interface LineItem extends BaseModel {
@@ -54,6 +56,9 @@ export interface LineItem extends BaseModel {
 	readonly period_start: string;
 	readonly period_end: string;
 	readonly metadata: Metadata;
+	readonly credits_applied: Decimal;
+	readonly wallet_transaction_id?: string;
+	readonly discount_applied: Decimal;
 }
 
 export enum INVOICE_TYPE {

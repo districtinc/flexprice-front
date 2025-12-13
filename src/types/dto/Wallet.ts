@@ -6,7 +6,6 @@ import {
 	WALLET_AUTO_TOPUP_TRIGGER,
 	WALLET_STATUS,
 	WALLET_TYPE,
-	WALLET_CONFIG_PRICE_TYPE,
 	WalletTransaction,
 } from '@/models';
 
@@ -27,10 +26,10 @@ export interface CreateWalletPayload {
 	auto_topup_min_balance?: string;
 	auto_topup_amount?: string;
 	wallet_type?: WALLET_TYPE;
-	config?: {
-		allowed_price_types: WALLET_CONFIG_PRICE_TYPE[];
-	};
+	config?: WalletConfig;
 }
+
+export type WalletConfig = Record<string, never>;
 
 export interface TopupWalletPayload {
 	credits_to_add: number;
@@ -91,9 +90,7 @@ export interface WalletResponse {
 	auto_topup_min_balance: string;
 	auto_topup_amount: string;
 	wallet_type: WALLET_TYPE;
-	config: {
-		allowed_price_types: WALLET_CONFIG_PRICE_TYPE[];
-	};
+	config: WalletConfig;
 	conversion_rate: string;
 	created_at: string;
 	updated_at: string;
@@ -111,9 +108,7 @@ export interface GetCustomerWalletsResponse extends BaseModel {
 	auto_topup_min_balance: number;
 	auto_topup_trigger: string;
 	balance: number;
-	config: {
-		allowed_price_types: WALLET_CONFIG_PRICE_TYPE[];
-	};
+	config: WalletConfig;
 	conversion_rate: number;
 	credit_balance: number;
 	currency: string;

@@ -167,7 +167,6 @@ const InvoiceTableMenu: FC<Props> = ({ data }) => {
 				}}
 				destination_id={data.id}
 				destination_type={PAYMENT_DESTINATION_TYPE.INVOICE}
-				customer_id={data.customer_id}
 				max_amount={Number(data.amount_remaining)}
 				currency={data.currency}
 				onSuccess={handlePaymentSuccess}
