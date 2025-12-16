@@ -66,7 +66,6 @@ const CustomerWalletTab = () => {
 	const { data: users } = useQuery({
 		queryKey: ['getAllUsers'],
 		queryFn: () => UserApi.getAllUsers(),
-		retry: false,
 	});
 
 	// Wallet Queries
