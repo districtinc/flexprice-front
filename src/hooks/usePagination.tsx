@@ -1,12 +1,12 @@
 import { useSearchParams } from 'react-router';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
 interface UsePaginationProps {
 	initialLimit?: number;
-	prefix?: PaginationPrefix;
+	prefix?: PAGINATION_PREFIX;
 }
 
-export enum PaginationPrefix {
+export enum PAGINATION_PREFIX {
 	WALLET_TRANSACTIONS = 'wallet_transactions',
 }
 
@@ -17,11 +17,20 @@ const usePagination = ({ initialLimit = 10, prefix }: UsePaginationProps = {}) =
 	const pageKey = prefix ? `${prefix}_page` : 'page';
 	const page = Number(searchParams.get(pageKey) || '1');
 
-	const reset = () => {
+	const reset = useCallback(() => {
 		const newParams = new URLSearchParams(searchParams);
 		newParams.set(pageKey, '1');
 		setSearchParams(newParams);
-	};
+	}, [searchParams, setSearchParams, pageKey]);
+
+	const setPage = useCallback(
+		(newPage: number) => {
+			const newParams = new URLSearchParams(searchParams);
+			newParams.set(pageKey, String(newPage));
+			setSearchParams(newParams);
+		},
+		[searchParams, setSearchParams, pageKey],
+	);
 
 	// Ensure `page` is set in the query parameters
 	useEffect(() => {
@@ -40,11 +49,7 @@ const usePagination = ({ initialLimit = 10, prefix }: UsePaginationProps = {}) =
 		limit,
 		offset,
 		page,
-		setPage: (newPage: number) => {
-			const newParams = new URLSearchParams(searchParams);
-			newParams.set(pageKey, String(newPage));
-			setSearchParams(newParams);
-		},
+		setPage,
 		reset,
 	};
 };

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import WalletApi from '@/api/WalletApi';
 import { UserApi } from '@/api';
-import usePagination from '@/hooks/usePagination';
+import usePagination, { PAGINATION_PREFIX } from '@/hooks/usePagination';
 import { Loader, ShortPagination, Spacer } from '@/components/atoms';
 import { WalletTransactionsTable, QueryBuilder } from '@/components/molecules';
 import { useEffect, useMemo } from 'react';
@@ -19,6 +19,7 @@ import { useQueryWithEmptyState } from '@/hooks/useQueryWithEmptyState';
 import { User } from '@/models/User';
 import { EXPAND } from '@/models/expand';
 import { generateExpandQueryParams } from '@/utils/common/api_helper';
+import toast from 'react-hot-toast';
 
 const sortingOptions: SortOption[] = [
 	{
@@ -29,7 +30,9 @@ const sortingOptions: SortOption[] = [
 ];
 
 const WalletTransactionList = () => {
-	const { limit, offset, page, reset } = usePagination();
+	const { limit, offset, page, reset } = usePagination({
+		prefix: PAGINATION_PREFIX.WALLET_TRANSACTIONS,
+	});
 
 	// Fetch users for the Created By filter
 	const {
@@ -91,7 +94,7 @@ const WalletTransactionList = () => {
 				direction: SortDirection.DESC,
 			},
 		],
-		debounceTime: 500,
+		debounceTime: 300,
 	});
 
 	const fetchWalletTransactions = async () => {
@@ -115,11 +118,11 @@ const WalletTransactionList = () => {
 		probeData,
 	} = useQueryWithEmptyState({
 		main: {
-			queryKey: ['fetchAllWalletTransactions', page, JSON.stringify(sanitizedFilters), JSON.stringify(sanitizedSorts)],
+			queryKey: ['fetchAllWalletTransactionsMain', page, JSON.stringify(sanitizedFilters), JSON.stringify(sanitizedSorts)],
 			queryFn: fetchWalletTransactions,
 		},
 		probe: {
-			queryKey: ['fetchAllWalletTransactions', 'probe', page, JSON.stringify(sanitizedFilters), JSON.stringify(sanitizedSorts)],
+			queryKey: ['fetchAllWalletTransactionsProbe', 'probe', page, JSON.stringify(sanitizedFilters), JSON.stringify(sanitizedSorts)],
 			queryFn: async () => {
 				return await WalletApi.getAllWalletTransactionsByFilter({
 					limit: 1,
@@ -138,32 +141,13 @@ const WalletTransactionList = () => {
 		return !isLoading && probeData?.items.length === 0 && transactionsData?.items.length === 0;
 	}, [isLoading, probeData, transactionsData]);
 
-	if (isLoading || isUsersLoading) {
-		return <Loader />;
+	if (isError) {
+		toast.error('Error fetching wallet transactions');
+		return null;
 	}
 
-	if (isError) {
-		return (
-			<div className='card'>
-				<div className='text-center py-12'>
-					<h3 className='text-lg font-medium text-gray-900 mb-2'>Backend API Limitation</h3>
-					<p className='text-sm text-gray-500 mb-4'>
-						The backend only supports wallet transaction search per wallet:
-						<br />
-						<code className='text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block'>
-							POST /v1/wallets/&#123;wallet_id&#125;/transactions/search
-						</code>
-					</p>
-					<p className='text-sm text-gray-500'>
-						To show all wallet transactions across all wallets, the backend needs to implement:
-						<br />
-						<code className='text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block'>POST /v1/wallets/transactions/search</code>
-						<br />
-						<span className='text-xs text-gray-400 mt-2 inline-block'>(without requiring a specific wallet_id)</span>
-					</p>
-				</div>
-			</div>
-		);
+	if (isLoading || isUsersLoading) {
+		return <Loader />;
 	}
 
 	if (showEmptyPage) {
@@ -179,18 +163,23 @@ const WalletTransactionList = () => {
 
 	return (
 		<div>
-			<QueryBuilder
-				filterOptions={filterOptions}
-				filters={filters}
-				onFilterChange={setFilters}
-				sortOptions={sortingOptions}
-				onSortChange={setSorts}
-				selectedSorts={sorts}
-			/>
-			<Spacer className='!h-4' />
-			<WalletTransactionsTable data={transactionsData?.items || []} users={users?.items || []} />
-			<Spacer className='!h-4' />
-			<ShortPagination unit='Transactions' totalItems={transactionsData?.pagination.total ?? 0} />
+			<div>
+				<QueryBuilder
+					filterOptions={filterOptions}
+					filters={filters}
+					onFilterChange={setFilters}
+					sortOptions={sortingOptions}
+					onSortChange={setSorts}
+					selectedSorts={sorts}
+				/>
+				<WalletTransactionsTable data={transactionsData?.items || []} users={users?.items || []} />
+				<Spacer className='!h-4' />
+				<ShortPagination
+					prefix={PAGINATION_PREFIX.WALLET_TRANSACTIONS}
+					unit='Transactions'
+					totalItems={transactionsData?.pagination.total ?? 0}
+				/>
+			</div>
 		</div>
 	);
 };

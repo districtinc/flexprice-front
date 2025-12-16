@@ -134,8 +134,8 @@ export interface GetCustomerWalletsResponse extends BaseModel {
 }
 
 export interface GetWalletTransactionsByFilterPayload extends Pagination {
-	filters: TypedBackendFilter[];
-	sort: TypedBackendSort[];
+	filters?: TypedBackendFilter[];
+	sort?: TypedBackendSort[];
 	expand?: string;
 }
 

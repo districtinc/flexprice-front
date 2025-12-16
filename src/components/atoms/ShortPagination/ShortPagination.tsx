@@ -1,14 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import usePagination, { PaginationPrefix } from '@/hooks/usePagination';
+import usePagination, { PAGINATION_PREFIX } from '@/hooks/usePagination';
 
 interface ShortPaginationProps {
 	totalItems: number; // Changed to required
 	pageSize?: number;
 	showPages?: boolean;
 	unit?: string;
-	prefix?: PaginationPrefix;
+	prefix?: PAGINATION_PREFIX;
 }
 
 const ShortPagination = ({
