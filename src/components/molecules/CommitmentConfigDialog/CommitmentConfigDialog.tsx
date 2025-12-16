@@ -34,7 +34,7 @@ const CommitmentConfigDialog: FC<CommitmentConfigDialogProps> = ({ isOpen, onOpe
 	const [commitmentQuantity, setCommitmentQuantity] = useState<string>('');
 	const [overageFactor, setOverageFactor] = useState<string>('1.0');
 	const [enableTrueUp, setEnableTrueUp] = useState<boolean>(false);
-	const [isWindowCommitment, setIsWindowCommitment] = useState<boolean>(true);
+	const [isWindowCommitment, setIsWindowCommitment] = useState<boolean>(() => supportsWindowCommitment(price));
 	const [validationError, setValidationError] = useState<string | null>(null);
 
 	const currencySymbol = getCurrencySymbol(price.currency);
