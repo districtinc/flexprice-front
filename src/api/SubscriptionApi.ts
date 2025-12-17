@@ -19,6 +19,7 @@ import {
 	AddAddonRequest,
 	RemoveAddonRequest,
 	AddonAssociationResponse,
+	ListAddonAssociationsResponse,
 	CreateSubscriptionLineItemRequest,
 	UpdateSubscriptionLineItemRequest,
 	DeleteSubscriptionLineItemRequest,
@@ -141,8 +142,8 @@ class SubscriptionApi {
 	/**
 	 * Get active addons for a subscription
 	 */
-	public static async getActiveAddons(subscriptionId: string): Promise<AddonAssociationResponse[]> {
-		return await AxiosClient.get<AddonAssociationResponse[]>(`${this.baseUrl}/${subscriptionId}/addons/active`);
+	public static async getActiveAddons(subscriptionId: string): Promise<ListAddonAssociationsResponse> {
+		return await AxiosClient.get<ListAddonAssociationsResponse>(`${this.baseUrl}/${subscriptionId}/addons/associations`);
 	}
 
 	/**

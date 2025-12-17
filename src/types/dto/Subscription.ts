@@ -48,6 +48,8 @@ import { TaxRateOverride } from './tax';
 import { TypedBackendFilter, TypedBackendSort } from '../formatters/QueryBuilder';
 import { CreateCreditGrantRequest } from './CreditGrant';
 import { LineItemCommitmentsMap } from './LineItemCommitmentConfig';
+import { AddonResponse } from './Addon';
+import { ADDON_ASSOCIATION_STATUS } from '@/models/AddonAssociation';
 
 export interface GetSubscriptionDetailsPayload {
 	subscription_id: string;
@@ -377,13 +379,23 @@ export interface AddonAssociationResponse {
 	entity_type: string;
 	addon_id: string;
 	start_date: string;
-	addon_status: string;
+	end_date?: string;
+	cancellation_reason?: string;
+	cancelled_at?: string;
+	addon_status: ADDON_ASSOCIATION_STATUS;
 	tenant_id: string;
 	status: string;
 	created_at: string;
 	updated_at: string;
 	created_by: string;
 	updated_by: string;
+	addon?: AddonResponse;
+	subscription?: SubscriptionResponse;
+}
+
+export interface ListAddonAssociationsResponse {
+	items: AddonAssociationResponse[];
+	pagination: Pagination;
 }
 
 // =============================================================================

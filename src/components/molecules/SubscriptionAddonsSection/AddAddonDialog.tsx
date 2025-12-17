@@ -1,41 +1,40 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Button } from '@/components/atoms';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Button, Select } from '@/components/atoms';
 import Dialog from '@/components/atoms/Dialog';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Select } from '@/components/atoms';
 import AddonApi from '@/api/AddonApi';
 import SubscriptionApi from '@/api/SubscriptionApi';
 import { toSentenceCase } from '@/utils/common/helper_functions';
 import { ADDON_TYPE } from '@/models/Addon';
 import { AddAddonRequest } from '@/types/dto/Subscription';
+import { AddonResponse } from '@/types/dto/Addon';
 import toast from 'react-hot-toast';
+import { refetchQueries } from '@/core/services/tanstack/ReactQueryProvider';
 
 interface Props {
 	isOpen: boolean;
 	onOpenChange: (open: boolean) => void;
 	subscriptionId: string;
-	existingAddonIds: string[];
+	existingAddons: AddonResponse[];
 }
 
 interface FormErrors {
 	addon_id?: string;
 }
 
-const AddAddonDialog: React.FC<Props> = ({ isOpen, onOpenChange, subscriptionId, existingAddonIds }) => {
+const AddAddonDialog: React.FC<Props> = ({ isOpen, onOpenChange, subscriptionId, existingAddons }) => {
 	const [formData, setFormData] = useState<Partial<AddAddonRequest>>({});
 	const [errors, setErrors] = useState<FormErrors>({});
-	const queryClient = useQueryClient();
 
 	// Fetch available addons
-	const { data: addons = [] } = useQuery({
-		queryKey: ['addons'],
+	const { data: addonsResponse } = useQuery({
+		queryKey: ['subaddons', subscriptionId],
 		queryFn: async () => {
-			const response = await AddonApi.List({ limit: 1000, offset: 0 });
-			return response.items;
+			return await AddonApi.List({ limit: 1000, offset: 0 });
 		},
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false,
 	});
+
+	const existingAddonIds = useMemo(() => existingAddons.map((addon) => addon.id), [existingAddons]);
 
 	// Reset form when modal opens/closes
 	useEffect(() => {
@@ -65,8 +64,8 @@ const AddAddonDialog: React.FC<Props> = ({ isOpen, onOpenChange, subscriptionId,
 		},
 		onSuccess: () => {
 			toast.success('Addon added successfully');
-			queryClient.invalidateQueries({ queryKey: ['subscriptionActiveAddons', subscriptionId] });
-			queryClient.invalidateQueries({ queryKey: ['subscriptionDetails', subscriptionId] });
+			refetchQueries(['subscriptionActiveAddons', subscriptionId]);
+			refetchQueries(['subscriptionDetails', subscriptionId]);
 			setFormData({});
 			setErrors({});
 			onOpenChange(false);
@@ -112,23 +111,21 @@ const AddAddonDialog: React.FC<Props> = ({ isOpen, onOpenChange, subscriptionId,
 
 	// Filter addon options based on existing addons and addon type
 	const filteredAddonOptions = useMemo(() => {
-		return addons
-			.filter((addon) => {
-				// For one-time addons, check if they're already linked
+		// Filter out addons that are already added to the subscription
+		const filteredAddons =
+			addonsResponse?.items?.filter((addon) => {
 				if (addon.type === ADDON_TYPE.ONETIME) {
-					const isAlreadyLinked = existingAddonIds.includes(addon.id);
-					return !isAlreadyLinked;
+					return !existingAddonIds.includes(addon.id);
 				}
-
-				// For multiple addons, always include them (can be added multiple times)
 				return true;
-			})
-			.map((addon) => ({
-				label: addon.name,
-				value: addon.id,
-				description: `${toSentenceCase(addon.type)} - ${addon.description || 'No description'}`,
-			}));
-	}, [addons, existingAddonIds]);
+			}) || [];
+
+		return filteredAddons.map((addon: AddonResponse) => ({
+			label: addon.name,
+			value: addon.id,
+			description: `${toSentenceCase(addon.type)} - ${addon.description || 'No description'}`,
+		}));
+	}, [addonsResponse, existingAddonIds]);
 
 	return (
 		<Dialog isOpen={isOpen} showCloseButton={false} onOpenChange={onOpenChange} title='Add Addon' className='sm:max-w-[600px]'>

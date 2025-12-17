@@ -1,28 +1,24 @@
-import { FC, useState, useMemo } from 'react';
+import { FC, useState, useMemo, useCallback, ReactNode } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
-import { Button, Card, CardHeader, Chip, Dialog, AddButton } from '@/components/atoms';
+import { Button, Card, CardHeader, Chip, Dialog, AddButton, Tooltip } from '@/components/atoms';
 import { FlexpriceTable, ColumnData } from '@/components/molecules';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { BsThreeDotsVertical } from 'react-icons/bs';
 import SubscriptionApi from '@/api/SubscriptionApi';
-import AddonApi from '@/api/AddonApi';
 import { ADDON_TYPE } from '@/models/Addon';
+import { ADDON_ASSOCIATION_STATUS } from '@/models/AddonAssociation';
 import { AddonAssociationResponse } from '@/types/dto/Subscription';
-import { AddonResponse } from '@/types/dto/Addon';
 import { toSentenceCase } from '@/utils/common/helper_functions';
 import { Price, PRICE_TYPE } from '@/models/Price';
 import { getCurrentPriceAmount } from '@/utils/common/price_override_helpers';
 import { getTotalPayableTextWithCoupons } from '@/utils/common/helper_functions';
 import toast from 'react-hot-toast';
 import AddAddonDialog from './AddAddonDialog';
+import { formatDateTimeWithSecondsAndTimezone } from '@/utils/common/format_date';
 
 interface SubscriptionAddonsSectionProps {
 	subscriptionId: string;
-}
-
-interface AddonWithDetails extends AddonAssociationResponse {
-	addon?: AddonResponse;
 }
 
 const getAddonTypeChip = (type: string) => {
@@ -58,6 +54,91 @@ const formatAddonCharges = (prices: Price[] = []): string => {
 	return getTotalPayableTextWithCoupons(recurringPrices, usagePrices, recurringTotal, []);
 };
 
+type AddonStatus = `${ADDON_ASSOCIATION_STATUS}`;
+
+const getStatusVariant = (status: AddonStatus): 'info' | 'default' | 'success' => {
+	switch (status) {
+		case 'upcoming':
+		case 'pending':
+		case 'scheduled':
+			return 'info';
+		case 'inactive':
+		case 'cancelled':
+			return 'default';
+		case 'active':
+		default:
+			return 'success';
+	}
+};
+
+const formatAddonAssociationTooltip = (association: AddonAssociationResponse): ReactNode => {
+	const { start_date, end_date } = association;
+	const items: ReactNode[] = [];
+
+	if (start_date && start_date.trim() !== '') {
+		const parsed = new Date(start_date);
+		if (!isNaN(parsed.getTime())) {
+			items.push(
+				<div key='start' className='flex items-center gap-2'>
+					<span className='text-xs font-medium text-gray-500'>Start</span>
+					<span className='text-sm font-medium'>{formatDateTimeWithSecondsAndTimezone(parsed)}</span>
+				</div>,
+			);
+		}
+	}
+
+	if (end_date && end_date.trim() !== '') {
+		const parsed = new Date(end_date);
+		if (!isNaN(parsed.getTime())) {
+			items.push(
+				<div key='end' className='flex items-center gap-2'>
+					<span className='text-xs font-medium text-gray-500'>End</span>
+					<span className='text-sm font-medium'>{formatDateTimeWithSecondsAndTimezone(parsed)}</span>
+				</div>,
+			);
+		}
+	}
+
+	if (items.length === 0) {
+		return <span className='text-sm'>No date information</span>;
+	}
+
+	return <div className='flex flex-col gap-2'>{items}</div>;
+};
+
+interface AddonAssociationWithStatus extends AddonAssociationResponse {
+	precomputedStatus: AddonStatus;
+	statusVariant: 'info' | 'default' | 'success';
+	statusLabel: string;
+	tooltipContent: ReactNode;
+}
+
+const computeAssociationStatus = (association: AddonAssociationResponse): AddonStatus => {
+	const raw = association.addon_status?.toLowerCase() as AddonStatus | undefined;
+	if (
+		raw === ADDON_ASSOCIATION_STATUS.CANCELLED ||
+		raw === ADDON_ASSOCIATION_STATUS.INACTIVE ||
+		raw === ADDON_ASSOCIATION_STATUS.ACTIVE ||
+		raw === ADDON_ASSOCIATION_STATUS.UPCOMING ||
+		raw === ADDON_ASSOCIATION_STATUS.PENDING ||
+		raw === ADDON_ASSOCIATION_STATUS.SCHEDULED
+	) {
+		return raw;
+	}
+
+	// Fallback to date-based computation
+	const now = new Date();
+	if (association.start_date && association.start_date.trim() !== '') {
+		const start = new Date(association.start_date);
+		if (!isNaN(start.getTime()) && start > now) return 'upcoming';
+	}
+	if (association.end_date && association.end_date.trim() !== '') {
+		const end = new Date(association.end_date);
+		if (!isNaN(end.getTime()) && end < now) return 'inactive';
+	}
+	return 'active';
+};
+
 const SubscriptionAddonsSection: FC<SubscriptionAddonsSectionProps> = ({ subscriptionId }) => {
 	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -65,9 +146,9 @@ const SubscriptionAddonsSection: FC<SubscriptionAddonsSectionProps> = ({ subscri
 	const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 	const queryClient = useQueryClient();
 
-	// Fetch active addons
+	// Fetch active addons (backend returns { items, pagination })
 	const {
-		data: addonAssociations = [],
+		data: addonAssociationsResponse,
 		isLoading,
 		isError,
 	} = useQuery({
@@ -80,27 +161,35 @@ const SubscriptionAddonsSection: FC<SubscriptionAddonsSectionProps> = ({ subscri
 		refetchOnWindowFocus: false,
 	});
 
-	// Fetch addon details for each association
-	const { data: allAddons = [] } = useQuery({
-		queryKey: ['addons'],
-		queryFn: async () => {
-			const response = await AddonApi.List({ limit: 1000, offset: 0 });
-			return response.items;
-		},
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false,
-	});
+	// Normalize response to always be an array for rendering
+	const addonAssociations = useMemo<AddonAssociationResponse[]>(() => {
+		if (!addonAssociationsResponse) return [];
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const response = addonAssociationsResponse as any;
+		return response.items ?? response ?? [];
+	}, [addonAssociationsResponse]);
 
-	// Combine addon associations with their details
-	const addonsWithDetails: AddonWithDetails[] = useMemo(() => {
+	const processedAddonAssociations = useMemo<AddonAssociationWithStatus[]>(() => {
 		return addonAssociations.map((association) => {
-			const addonDetails = allAddons.find((addon) => addon.id === association.addon_id);
+			const status = computeAssociationStatus(association);
+			const statusVariant = getStatusVariant(status);
+			const statusLabel = toSentenceCase(status || 'active');
+			const tooltipContent = formatAddonAssociationTooltip(association);
+
 			return {
 				...association,
-				addon: addonDetails,
+				precomputedStatus: status,
+				statusVariant,
+				statusLabel,
+				tooltipContent,
 			};
 		});
-	}, [addonAssociations, allAddons]);
+	}, [addonAssociations]);
+
+	const addonNameToDelete = useMemo(() => {
+		if (!addonToDelete) return 'this addon';
+		return addonAssociations.find((a) => a.id === addonToDelete.id)?.addon?.name || 'this addon';
+	}, [addonToDelete, addonAssociations]);
 
 	// Delete addon mutation
 	const { mutate: deleteAddon, isPending: isDeletingAddon } = useMutation({
@@ -121,50 +210,59 @@ const SubscriptionAddonsSection: FC<SubscriptionAddonsSectionProps> = ({ subscri
 		},
 	});
 
-	const handleDelete = (addon: AddonAssociationResponse) => {
+	const handleDelete = useCallback((addon: AddonAssociationResponse) => {
 		setDropdownOpen(null);
 		setAddonToDelete(addon);
 		setIsDeleteDialogOpen(true);
-	};
+	}, []);
 
-	const confirmDelete = () => {
-		if (addonToDelete) {
-			deleteAddon(addonToDelete.id);
-		}
-	};
+	const confirmDelete = useCallback(() => {
+		if (!addonToDelete) return;
+		deleteAddon(addonToDelete.id);
+	}, [addonToDelete, deleteAddon]);
 
-	const cancelDelete = () => {
+	const cancelDelete = useCallback(() => {
 		setIsDeleteDialogOpen(false);
 		setAddonToDelete(null);
-	};
+	}, []);
 
-	const columns: ColumnData<AddonWithDetails>[] = [
-		{
-			title: 'Name',
-			render: (row) => {
-				return <span>{row.addon?.name || row.addon_id}</span>;
+	const columns: ColumnData<AddonAssociationWithStatus>[] = useMemo(
+		() => [
+			{
+				title: 'Name',
+				render: (row) => <span>{row.addon?.name || row.addon_id}</span>,
 			},
-		},
-		{
-			title: 'Type',
-			render: (row) => {
-				return row.addon ? getAddonTypeChip(row.addon.type) : '--';
+			{
+				title: 'Type',
+				render: (row) => (row.addon ? getAddonTypeChip(row.addon.type) : '--'),
 			},
-		},
-		{
-			title: 'Charges',
-			render: (row) => {
-				const prices = row.addon?.prices || [];
-				return <span>{formatAddonCharges(prices)}</span>;
+			{
+				title: 'Status',
+				render: (row) => (
+					<Tooltip
+						content={row.tooltipContent}
+						delayDuration={0}
+						sideOffset={5}
+						className='bg-white border border-gray-200 shadow-lg text-sm text-gray-900 px-4 py-3 rounded-lg max-w-[320px]'>
+						<span>
+							<Chip label={row.statusLabel} variant={row.statusVariant} />
+						</span>
+					</Tooltip>
+				),
 			},
-		},
-		{
-			title: '',
-			width: '30px',
-			fieldVariant: 'interactive',
-			hideOnEmpty: true,
-			render: (row) => {
-				return (
+			{
+				title: 'Charges',
+				render: (row) => {
+					const prices = row.addon?.prices || [];
+					return <span>{formatAddonCharges(prices)}</span>;
+				},
+			},
+			{
+				title: '',
+				width: '30px',
+				fieldVariant: 'interactive',
+				hideOnEmpty: true,
+				render: (row) => (
 					<div
 						data-interactive='true'
 						onClick={(e) => {
@@ -190,10 +288,11 @@ const SubscriptionAddonsSection: FC<SubscriptionAddonsSectionProps> = ({ subscri
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</div>
-				);
+				),
 			},
-		},
-	];
+		],
+		[dropdownOpen, handleDelete],
+	);
 
 	if (isLoading) {
 		return (
@@ -214,8 +313,8 @@ const SubscriptionAddonsSection: FC<SubscriptionAddonsSectionProps> = ({ subscri
 		<>
 			<Card variant='notched'>
 				<CardHeader title='Addons' cta={<AddButton onClick={() => setIsAddDialogOpen(true)} label='Add Addon' />} />
-				{addonsWithDetails.length > 0 ? (
-					<FlexpriceTable showEmptyRow data={addonsWithDetails} columns={columns} variant='no-bordered' />
+				{processedAddonAssociations.length > 0 ? (
+					<FlexpriceTable showEmptyRow data={processedAddonAssociations} columns={columns} variant='no-bordered' />
 				) : (
 					<div className='flex flex-col items-center justify-center py-12 text-center'>
 						<p className='text-gray-500 text-sm'>No addons added to this subscription yet</p>
@@ -228,14 +327,12 @@ const SubscriptionAddonsSection: FC<SubscriptionAddonsSectionProps> = ({ subscri
 				isOpen={isAddDialogOpen}
 				onOpenChange={setIsAddDialogOpen}
 				subscriptionId={subscriptionId}
-				existingAddonIds={addonsWithDetails.map((a) => a.addon_id)}
+				existingAddons={addonAssociations.map((a) => a.addon).filter((addon): addon is NonNullable<typeof addon> => Boolean(addon))}
 			/>
 
 			{/* Delete Confirmation Dialog */}
 			<Dialog
-				title={`Are you sure you want to delete the addon "${
-					addonToDelete ? addonsWithDetails.find((a) => a.id === addonToDelete.id)?.addon?.name || 'this addon' : 'this addon'
-				}"?`}
+				title={`Are you sure you want to delete the addon "${addonNameToDelete}"?`}
 				description='This action cannot be undone.'
 				titleClassName='text-lg font-normal text-gray-800'
 				isOpen={isDeleteDialogOpen}
