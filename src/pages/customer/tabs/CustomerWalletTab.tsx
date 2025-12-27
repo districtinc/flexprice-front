@@ -16,7 +16,7 @@ import { Dialog, Skeleton, Tooltip, TooltipContent, TooltipProvider, TooltipTrig
 import usePagination from '@/hooks/usePagination';
 import { Wallet } from '@/models/Wallet';
 import WalletApi from '@/api/WalletApi';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { IoSearch } from 'react-icons/io5';
@@ -29,6 +29,7 @@ import { DetailsCard } from '@/components/molecules';
 import { formatAmount } from '@/components/atoms/Input/Input';
 import { refetchQueries } from '@/core/services/tanstack/ReactQueryProvider';
 import { logger } from '@/utils/common/Logger';
+import { ServerError } from '@/core/axios/types';
 
 const formatWalletStatus = (status?: string) => {
 	const statusMap: Record<string, string> = {
@@ -94,6 +95,24 @@ const CustomerWalletTab = () => {
 				offset,
 			}),
 		enabled: !!customerId && !!activeWallet,
+	});
+
+	// Mutations
+	const { mutate: updateAutoTopup } = useMutation({
+		mutationFn: async ({ walletId, config }: { walletId: string; config: AutoTopupConfig }) => {
+			return await WalletApi.updateWallet(walletId, {
+				auto_topup: config,
+			});
+		},
+		onSuccess: async () => {
+			setShowAutoTopupModal(false);
+			await refetchQueries(['fetchWallets', customerId!]);
+			toast.success('Auto top-up settings updated successfully');
+		},
+		onError: (error: ServerError) => {
+			logger.error('Failed to update auto top-up settings', error);
+			toast.error(error.error.message || 'Failed to update auto top-up settings');
+		},
 	});
 
 	// Memoized and derived data
@@ -264,19 +283,9 @@ const CustomerWalletTab = () => {
 			<WalletAutoTopup
 				open={showAutoTopupModal}
 				autoTopupConfig={activeWallet?.auto_topup}
-				onSave={async (config: AutoTopupConfig) => {
+				onSave={(config: AutoTopupConfig) => {
 					if (!activeWallet?.id) return;
-					try {
-						await WalletApi.updateWallet(activeWallet.id!, {
-							auto_topup: config,
-						});
-						setShowAutoTopupModal(false);
-						refetchQueries(['fetchWallets', customerId!]);
-						toast.success('Auto top-up settings updated successfully');
-					} catch (e) {
-						logger.error('Failed to update auto top-up settings', e);
-						toast.error('Failed to update auto top-up settings');
-					}
+					updateAutoTopup({ walletId: activeWallet.id!, config });
 				}}
 				onClose={() => setShowAutoTopupModal(false)}
 			/>
