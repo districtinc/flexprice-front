@@ -113,7 +113,7 @@ const CreateCustomerDrawer: FC<Props> = ({ data, onOpenChange, open, trigger }) 
 	// Updated validation schema to match backend requirements
 	const customerSchema = z
 		.object({
-			external_id: z.string().nonempty('Customer Slug is required'),
+			external_id: z.string().nonempty('External ID is required'),
 			name: z.string().nonempty('Customer Name is required'),
 			email: z.string().email('Invalid email address').optional().or(z.literal('')),
 			address_line1: z.string().max(255, 'Address Line 1 must be less than 255 characters').optional().or(z.literal('')),
@@ -241,7 +241,7 @@ const CreateCustomerDrawer: FC<Props> = ({ data, onOpenChange, open, trigger }) 
 								error={errors.name}
 							/>
 							<Input
-								label='Lookup Key'
+								label='External ID'
 								placeholder='customer-'
 								value={formData.external_id || ''}
 								onChange={(e) => handleChange('external_id', e)}
@@ -250,7 +250,7 @@ const CreateCustomerDrawer: FC<Props> = ({ data, onOpenChange, open, trigger }) 
 							/>
 							<Input
 								label='Email (Optional)'
-								placeholder='e.g. kaavya@gmail.com'
+								placeholder='e.g. example@gmail.com'
 								type='email'
 								value={formData.email || ''}
 								onChange={(e) => handleChange('email', e)}
