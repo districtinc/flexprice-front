@@ -53,6 +53,10 @@ export interface TransformQuantity {
 
 export interface PriceUnitConfig {
 	readonly amount?: string;
+	/**
+	 * The price unit code (3 characters, e.g., "BTC", "TOK", "CRD")
+	 * This is the unique identifier for the price unit, not the full PriceUnit object
+	 */
 	readonly price_unit: string;
 	readonly price_unit_tiers?: CreatePriceTier[];
 }

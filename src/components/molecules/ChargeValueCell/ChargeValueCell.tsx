@@ -1,4 +1,5 @@
-import { BILLING_MODEL, Price, PRICE_TYPE, TIER_MODE } from '@/models';
+import { BILLING_MODEL, Price, PRICE_TYPE, TIER_MODE, PRICE_UNIT_TYPE } from '@/models';
+import { PriceUnit } from '@/models/PriceUnit';
 import { getPriceTableCharge, calculateDiscountedPrice } from '@/utils';
 import { Info } from 'lucide-react';
 import { formatAmount } from '@/components/atoms/Input/Input';
@@ -10,35 +11,66 @@ import { ExtendedPriceOverride } from '@/utils';
 import { cn } from '@/lib/utils';
 
 interface Props {
-	data: Price;
+	data: Price & { pricing_unit?: PriceUnit };
 	overriddenAmount?: string;
 	appliedCoupon?: Coupon | null;
 	priceOverride?: ExtendedPriceOverride;
 }
 
 const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride }: Props) => {
+	// Helper to get the appropriate symbol for display
+	const getDisplaySymbol = (price: Price & { pricing_unit?: PriceUnit }): string => {
+		// Priority 1: Use pricing_unit.symbol from PriceResponse if available (preferred - has actual symbol like "₿", "€", etc.)
+		if (price.price_unit_type === PRICE_UNIT_TYPE.CUSTOM && price.pricing_unit?.symbol) {
+			return price.pricing_unit.symbol;
+		}
+
+		// Priority 2: Fall back to price_unit_config.price_unit (code string like "BTC", "TOK")
+		if (price.price_unit_type === PRICE_UNIT_TYPE.CUSTOM && price.price_unit_config?.price_unit) {
+			return price.price_unit_config.price_unit;
+		}
+
+		// Priority 3: Use currency symbol for FIAT currencies
+		return getCurrencySymbol(price.currency);
+	};
+
+	// Helper to get the appropriate amount for display
+	const getDisplayAmount = (price: Price): string => {
+		if (price.price_unit_type === PRICE_UNIT_TYPE.CUSTOM) {
+			// For custom price units, prefer price_unit_amount or price_unit_config.amount
+			return price.price_unit_amount || price.price_unit_config?.amount || price.amount || '0';
+		}
+		return price.amount || '0';
+	};
+
+	// Helper to get the appropriate tiers for display
+	const getDisplayTiers = (price: Price) => {
+		if (price.price_unit_type === PRICE_UNIT_TYPE.CUSTOM) {
+			return price.price_unit_tiers || null;
+		}
+		return price.tiers;
+	};
+
 	// Helper functions
 	const formatPriceDisplay = (
 		amount: string,
-		currency: string,
+		symbol: string,
 		billingModel: BILLING_MODEL | 'SLAB_TIERED',
 		transformQuantity?: any,
 		tiers?: any[] | null,
 	) => {
-		const currencySymbol = getCurrencySymbol(currency);
-
 		switch (billingModel) {
 			case BILLING_MODEL.PACKAGE: {
 				const divideBy = transformQuantity?.divide_by || 1;
-				return `${currencySymbol}${formatAmount(amount)} / ${divideBy} units`;
+				return `${symbol}${formatAmount(amount)} / ${divideBy} units`;
 			}
 			case BILLING_MODEL.TIERED:
 			case 'SLAB_TIERED': {
 				const firstTier = tiers?.[0];
-				return `starts at ${currencySymbol}${formatAmount(firstTier?.unit_amount || '0')} per unit`;
+				return `starts at ${symbol}${formatAmount(firstTier?.unit_amount || '0')} per unit`;
 			}
 			default:
-				return `${currencySymbol}${formatAmount(amount)}`;
+				return `${symbol}${formatAmount(amount)}`;
 		}
 	};
 
@@ -93,9 +125,9 @@ const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride 
 
 		// Check for amount changes
 		if (priceOverride.amount && priceOverride.amount !== data.amount) {
-			changes.push(
-				`Amount: ${getCurrencySymbol(data.currency)}${formatAmount(data.amount)} → ${getCurrencySymbol(data.currency)}${formatAmount(priceOverride.amount)}`,
-			);
+			const originalSymbol = getDisplaySymbol(data);
+			const originalAmount = getDisplayAmount(data);
+			changes.push(`Amount: ${originalSymbol}${formatAmount(originalAmount)} → ${originalSymbol}${formatAmount(priceOverride.amount)}`);
 		}
 
 		// Check for quantity changes - only show if original price was usage-based
@@ -149,15 +181,17 @@ const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride 
 
 						// Check unit amount changes
 						if (originalTier.unit_amount !== newTier.unit_amount) {
+							const symbol = getDisplaySymbol(data);
 							tierChangesForThisTier.push(
-								`Per unit price: ${getCurrencySymbol(data.currency)}${formatAmount(originalTier.unit_amount)} → ${getCurrencySymbol(data.currency)}${formatAmount(newTier.unit_amount)}`,
+								`Per unit price: ${symbol}${formatAmount(originalTier.unit_amount)} → ${symbol}${formatAmount(newTier.unit_amount)}`,
 							);
 						}
 
 						// Check flat amount changes
 						if ((originalTier.flat_amount || '0') !== (newTier.flat_amount || '0')) {
+							const symbol = getDisplaySymbol(data);
 							tierChangesForThisTier.push(
-								`Flat fee: ${getCurrencySymbol(data.currency)}${formatAmount(originalTier.flat_amount || '0')} → ${getCurrencySymbol(data.currency)}${formatAmount(newTier.flat_amount || '0')}`,
+								`Flat fee: ${symbol}${formatAmount(originalTier.flat_amount || '0')} → ${symbol}${formatAmount(newTier.flat_amount || '0')}`,
 							);
 						}
 
@@ -168,8 +202,9 @@ const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride 
 						// New tier added - format like table structure
 						const newFrom = index === 0 ? 0 : newTiers[index - 1]?.up_to || 0;
 						const newUpToDisplay = newTier.up_to === null || newTier.up_to === undefined ? '∞' : newTier.up_to.toString();
+						const symbol = getDisplaySymbol(data);
 						tierChanges.push(
-							`Tier ${index + 1} added: From (>): ${newFrom}, Up to (<=): ${newUpToDisplay}, Per unit price: ${getCurrencySymbol(data.currency)}${formatAmount(newTier.unit_amount)}, Flat fee: ${getCurrencySymbol(data.currency)}${formatAmount(newTier.flat_amount || '0')}`,
+							`Tier ${index + 1} added: From (>): ${newFrom}, Up to (<=): ${newUpToDisplay}, Per unit price: ${symbol}${formatAmount(newTier.unit_amount)}, Flat fee: ${symbol}${formatAmount(newTier.flat_amount || '0')}`,
 						);
 					}
 				});
@@ -227,8 +262,10 @@ const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride 
 	const renderTieredPricingTooltip = () => {
 		if (!isTiered) return null;
 
-		const tiers = priceOverride?.tiers || data.tiers;
+		const tiers = priceOverride?.tiers || getDisplayTiers(data);
 		if (!tiers?.length) return null;
+
+		const displaySymbol = getDisplaySymbol(data);
 
 		const formatRange = (tier: any, index: number, allTiers: any[]) => {
 			// For the first tier, start from 0
@@ -264,12 +301,12 @@ const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride 
 											<div className='!font-normal text-muted-foreground'>{formatRange(tier, index, tiers)} units</div>
 											<div className='text-right'>
 												<div className='!font-normal text-muted-foreground'>
-													{getCurrencySymbol(data.currency)}
+													{displaySymbol}
 													{formatAmount(tier.unit_amount)} per unit
 												</div>
 												{Number(tier.flat_amount) > 0 && (
 													<div className='text-xs text-gray-500'>
-														+ {getCurrencySymbol(data.currency)}
+														+ {displaySymbol}
 														{formatAmount(tier.flat_amount || '0')} flat fee
 													</div>
 												)}
@@ -288,52 +325,55 @@ const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride 
 
 	// Main price display logic
 	const getMainPriceDisplay = () => {
+		const displaySymbol = getDisplaySymbol(data);
+
 		// If we have price overrides, prioritize showing the overridden values
 		if (hasOverrides && priceOverride) {
 			// Determine the effective billing model and tier mode
 			const effectiveBillingModel = priceOverride.billing_model || data.billing_model;
-			const effectiveAmount = priceOverride.amount || data.amount;
+			const effectiveAmount = priceOverride.amount || getDisplayAmount(data);
 			const effectiveTransformQuantity = priceOverride.transform_quantity || data.transform_quantity;
-			const effectiveTiers = priceOverride.tiers || data.tiers;
+			const effectiveTiers = priceOverride.tiers || getDisplayTiers(data);
 
 			// Handle SLAB_TIERED billing model
 			if (effectiveBillingModel === 'SLAB_TIERED') {
-				return formatPriceDisplay(effectiveAmount, data.currency, 'SLAB_TIERED', undefined, effectiveTiers);
+				return formatPriceDisplay(effectiveAmount, displaySymbol, 'SLAB_TIERED', undefined, effectiveTiers);
 			}
 
 			// Handle PACKAGE billing model
 			if (effectiveBillingModel === BILLING_MODEL.PACKAGE) {
-				return formatPriceDisplay(effectiveAmount, data.currency, BILLING_MODEL.PACKAGE, effectiveTransformQuantity);
+				return formatPriceDisplay(effectiveAmount, displaySymbol, BILLING_MODEL.PACKAGE, effectiveTransformQuantity);
 			}
 
 			// Handle TIERED billing model
 			if (effectiveBillingModel === BILLING_MODEL.TIERED) {
-				return formatPriceDisplay(effectiveAmount, data.currency, BILLING_MODEL.TIERED, undefined, effectiveTiers);
+				return formatPriceDisplay(effectiveAmount, displaySymbol, BILLING_MODEL.TIERED, undefined, effectiveTiers);
 			}
 
 			// Handle other billing models (fallback)
 			if (effectiveBillingModel && effectiveBillingModel !== data.billing_model) {
-				return formatPriceDisplay(effectiveAmount, data.currency, effectiveBillingModel, effectiveTransformQuantity, effectiveTiers);
+				return formatPriceDisplay(effectiveAmount, displaySymbol, effectiveBillingModel, effectiveTransformQuantity, effectiveTiers);
 			}
 
 			// Handle FLAT_FEE billing model
 			if (effectiveBillingModel === BILLING_MODEL.FLAT_FEE) {
-				return formatPriceDisplay(effectiveAmount, data.currency, BILLING_MODEL.FLAT_FEE);
+				return formatPriceDisplay(effectiveAmount, displaySymbol, BILLING_MODEL.FLAT_FEE);
 			}
 
 			// Fallback for any other billing model with overrides
-			return formatPriceDisplay(effectiveAmount, data.currency, data.billing_model, effectiveTransformQuantity, effectiveTiers);
+			return formatPriceDisplay(effectiveAmount, displaySymbol, data.billing_model, effectiveTransformQuantity, effectiveTiers);
 		}
 
 		// Fallback to original logic for non-overridden prices
 		const priceData = overriddenAmount ? { ...data, amount: overriddenAmount } : data;
-		return getPriceTableCharge(priceData as any, false);
+		// Pass pricing_unit to getPriceTableCharge so it can use the symbol
+		return getPriceTableCharge(priceData, false);
 	};
 
 	// Computed values
 	const effectiveBillingModel = priceOverride?.billing_model || data.billing_model;
 	const effectiveTierMode = priceOverride?.tier_mode || data.tier_mode;
-	const tiers = priceOverride?.tiers || data.tiers;
+	const tiers = priceOverride?.tiers || getDisplayTiers(data);
 	const isTiered =
 		(effectiveBillingModel === BILLING_MODEL.TIERED || effectiveBillingModel === 'SLAB_TIERED') && Array.isArray(tiers) && tiers.length > 0;
 
@@ -353,11 +393,11 @@ const ChargeValueCell = ({ data, overriddenAmount, appliedCoupon, priceOverride 
 				<div className='flex items-center gap-2'>
 					<div className='flex flex-col'>
 						<div className='line-through text-gray-400 text-sm'>
-							{getCurrencySymbol(data.currency)}
+							{getDisplaySymbol(data)}
 							{formatAmount(discountInfo.originalAmount.toString())}
 						</div>
 						<div className='text-gray-900 font-medium'>
-							{getCurrencySymbol(data.currency)}
+							{getDisplaySymbol(data)}
 							{formatAmount(discountInfo.discountedAmount.toString())}
 						</div>
 					</div>

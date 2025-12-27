@@ -81,6 +81,7 @@ export { default as UpdatePriceDialog } from './UpdatePriceDialog';
 export { UpdatePriceDetailsDrawer } from './UpdatePriceDetailsDrawer';
 export { default as PriceUnitDrawer } from './PriceUnitDrawer';
 export { default as PriceUnitTable } from './PriceUnitTable';
+export { default as CurrencyPriceUnitSelector } from './CurrencyPriceUnitSelector';
 
 // Addons & Features
 export { AddonTable, AddonModal } from './AddonTable';

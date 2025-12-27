@@ -22,7 +22,7 @@ export interface CreateBulkPriceRequest {
 }
 
 export interface GetAllPricesResponse extends Pagination {
-	items: Price[];
+	items: PriceResponse[];
 }
 
 export interface PriceFilter extends QueryFilter, TimeRangeFilter {
@@ -84,6 +84,10 @@ export interface CreatePriceTier {
 
 export interface PriceUnitConfig {
 	amount?: string;
+	/**
+	 * The price unit code (3 characters, e.g., "BTC", "TOK", "CRD")
+	 * This is the unique identifier for the price unit, not the full PriceUnit object
+	 */
 	price_unit: string;
 	price_unit_tiers?: CreatePriceTier[];
 }
@@ -95,7 +99,7 @@ export interface TransformQuantity {
 
 // Additional DTOs for bulk operations and responses
 export interface CreateBulkPriceResponse {
-	items: Price[];
+	items: PriceResponse[];
 }
 
 // Response types for individual price operations
