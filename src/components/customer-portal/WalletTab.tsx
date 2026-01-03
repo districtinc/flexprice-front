@@ -7,8 +7,7 @@ import { WalletTransactionsTable } from '@/components/molecules';
 import { WALLET_STATUS } from '@/models/Wallet';
 import { formatAmount } from '@/components/atoms/Input/Input';
 import { getCurrencySymbol } from '@/utils/common/helper_functions';
-import { Info, Wallet as WalletIcon } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import { Wallet as WalletIcon } from 'lucide-react';
 import usePagination from '@/hooks/usePagination';
 
 interface WalletTabProps {
@@ -109,59 +108,35 @@ const WalletTab = ({ customerId }: WalletTabProps) => {
 
 			{/* Wallet Balance Card */}
 			<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
-				<div className='flex items-start justify-between mb-6'>
-					<div className='flex items-center gap-3'>
-						<div className='h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center'>
-							<WalletIcon className='h-5 w-5 text-blue-600' />
-						</div>
-						<div>
-							<h3 className='text-base font-medium text-zinc-950'>{activeWallet?.name || 'Wallet'}</h3>
-							{activeWallet?.wallet_status && getWalletStatusChip(activeWallet.wallet_status)}
-						</div>
+				<div className='flex items-center gap-3 mb-6'>
+					<div className='h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center'>
+						<WalletIcon className='h-5 w-5 text-blue-600' />
+					</div>
+					<div>
+						<h3 className='text-base font-medium text-zinc-950'>{activeWallet?.name || 'Wallet'}</h3>
+						{activeWallet?.wallet_status && getWalletStatusChip(activeWallet.wallet_status)}
 					</div>
 				</div>
 
-				<div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
-					{/* Real-time Balance */}
-					<div>
-						<div className='flex items-center gap-1.5 mb-2'>
-							<span className='text-sm text-zinc-500'>Balance</span>
-							<TooltipProvider>
-								<Tooltip>
-									<TooltipTrigger>
-										<Info className='h-3.5 w-3.5 text-zinc-400' />
-									</TooltipTrigger>
-									<TooltipContent>
-										<p>Real-time balance including current usage</p>
-									</TooltipContent>
-								</Tooltip>
-							</TooltipProvider>
-						</div>
-						{balanceLoading ? (
-							<div className='h-8 w-24 bg-zinc-100 animate-pulse rounded'></div>
-						) : (
-							<>
-								<div className='flex items-baseline gap-2'>
-									<span className='text-zinc-500 text-2xl font-medium'>{currencySymbol}</span>
-									<span className='text-3xl font-semibold text-zinc-950'>
-										{formatAmount(walletBalance?.real_time_balance?.toString() ?? '0')}
-									</span>
-								</div>
-								<p className='text-sm text-zinc-500 mt-1'>
-									{formatAmount(walletBalance?.real_time_credit_balance?.toString() ?? '0')} credits
-								</p>
-							</>
-						)}
-					</div>
-
-					{/* Conversion Rate */}
-					<div>
-						<span className='text-sm text-zinc-500 block mb-2'>Conversion rate</span>
-						<p className='text-lg font-medium text-zinc-950'>
-							1 credit = {currencySymbol}
-							{walletBalance?.conversion_rate ?? activeWallet?.conversion_rate ?? 1}
-						</p>
-					</div>
+				{/* Balance */}
+				<div>
+					<span className='text-sm text-zinc-500 block mb-2'>Balance</span>
+					{balanceLoading ? (
+						<div className='h-10 w-32 bg-zinc-100 animate-pulse rounded'></div>
+					) : (
+						<>
+							<div className='flex items-baseline gap-2'>
+								<span className='text-4xl font-semibold text-zinc-950'>
+									{formatAmount(walletBalance?.real_time_credit_balance?.toString() ?? '0')}
+								</span>
+								<span className='text-base font-normal text-zinc-500'>credits</span>
+							</div>
+							<p className='text-sm text-zinc-500 mt-1'>
+								{currencySymbol}
+								{formatAmount(walletBalance?.real_time_balance?.toString() ?? '0')}
+							</p>
+						</>
+					)}
 				</div>
 			</Card>
 
