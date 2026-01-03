@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import WalletApi from '@/api/WalletApi';
-import { Card, Chip, Loader, NoDataCard, Select, ShortPagination } from '@/components/atoms';
+import { Card, Chip, Loader, Select, ShortPagination } from '@/components/atoms';
+import EmptyState from './EmptyState';
 import { WalletTransactionsTable } from '@/components/molecules';
 import { WALLET_STATUS } from '@/models/Wallet';
 import { formatAmount } from '@/components/atoms/Input/Input';
@@ -84,7 +85,11 @@ const WalletTab = ({ customerId }: WalletTabProps) => {
 	}
 
 	if (!wallets || wallets.length === 0) {
-		return <NoDataCard title='Wallet' subtitle='No wallet found for this account' />;
+		return (
+			<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
+				<EmptyState title='No wallet' description='No wallet has been set up for this account' />
+			</Card>
+		);
 	}
 
 	const currencySymbol = getCurrencySymbol(walletBalance?.currency ?? activeWallet?.currency ?? 'USD');
@@ -156,7 +161,7 @@ const WalletTab = ({ customerId }: WalletTabProps) => {
 						<ShortPagination unit='transactions' totalItems={transactionsData.pagination?.total || 0} />
 					</>
 				) : (
-					<div className='text-center py-8 text-zinc-500'>No transactions yet</div>
+					<EmptyState title='No transactions' description='Your transaction history will appear here' />
 				)}
 			</Card>
 		</div>

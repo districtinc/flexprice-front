@@ -5,3 +5,4 @@ export { default as WalletTab } from './WalletTab';
 export { default as BillingOverviewCard } from './BillingOverviewCard';
 export { default as SubscriptionsSection } from './SubscriptionsSection';
 export { default as UsageSection } from './UsageSection';
+export { default as EmptyState } from './EmptyState';

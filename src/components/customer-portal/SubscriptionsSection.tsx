@@ -1,7 +1,8 @@
-import { Card, Chip, NoDataCard } from '@/components/atoms';
+import { Card, Chip } from '@/components/atoms';
 import { Subscription, SUBSCRIPTION_STATUS } from '@/models/Subscription';
 import { formatDateShort } from '@/utils/common/helper_functions';
 import { Calendar, Clock } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 interface SubscriptionsSectionProps {
 	subscriptions: Subscription[];
@@ -33,17 +34,18 @@ const SubscriptionsSection = ({ subscriptions, isLoading }: SubscriptionsSection
 		);
 	}
 
-	if (!subscriptions || subscriptions.length === 0) {
-		return <NoDataCard title='Subscriptions' subtitle='No active subscriptions found' />;
-	}
-
 	// Filter to show only active/trialing subscriptions
-	const activeSubscriptions = subscriptions.filter(
-		(sub) => sub.subscription_status === SUBSCRIPTION_STATUS.ACTIVE || sub.subscription_status === SUBSCRIPTION_STATUS.TRIALING,
-	);
+	const activeSubscriptions =
+		subscriptions?.filter(
+			(sub) => sub.subscription_status === SUBSCRIPTION_STATUS.ACTIVE || sub.subscription_status === SUBSCRIPTION_STATUS.TRIALING,
+		) || [];
 
-	if (activeSubscriptions.length === 0) {
-		return <NoDataCard title='Subscriptions' subtitle='No active subscriptions found' />;
+	if (!subscriptions || subscriptions.length === 0 || activeSubscriptions.length === 0) {
+		return (
+			<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
+				<EmptyState title='No active subscriptions' description='You do not have any active subscriptions at the moment' />
+			</Card>
+		);
 	}
 
 	return (

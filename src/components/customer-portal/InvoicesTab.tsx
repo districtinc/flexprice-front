@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import InvoiceApi from '@/api/InvoiceApi';
-import { Card, Chip, NoDataCard } from '@/components/atoms';
+import { Card, Chip } from '@/components/atoms';
 import { Invoice, INVOICE_STATUS } from '@/models/Invoice';
 import { PAYMENT_STATUS } from '@/constants/payment';
 import { formatDateShort, getCurrencySymbol } from '@/utils/common/helper_functions';
@@ -10,6 +10,7 @@ import { formatAmount } from '@/components/atoms/Input/Input';
 import { Download, Search, Info } from 'lucide-react';
 import { Input } from '@/components/ui';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import EmptyState from './EmptyState';
 
 interface InvoicesTabProps {
 	customerId: string;
@@ -128,7 +129,11 @@ const InvoicesTab = ({ customerId }: InvoicesTabProps) => {
 	};
 
 	if (invoices.length === 0) {
-		return <NoDataCard title='Invoice History' subtitle='No invoices found' />;
+		return (
+			<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
+				<EmptyState title='No invoices' description='No invoices have been generated yet' />
+			</Card>
+		);
 	}
 
 	return (
@@ -216,7 +221,11 @@ const InvoicesTab = ({ customerId }: InvoicesTabProps) => {
 					</table>
 				</div>
 
-				{filteredInvoices.length === 0 && <div className='text-center py-8 text-zinc-500'>No invoices match your search</div>}
+				{filteredInvoices.length === 0 && (
+					<div className='py-8'>
+						<EmptyState title='No invoices found' description='No invoices match your search criteria' />
+					</div>
+				)}
 			</Card>
 		</div>
 	);
