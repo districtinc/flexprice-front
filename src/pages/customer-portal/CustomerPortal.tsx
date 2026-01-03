@@ -14,7 +14,7 @@ import { Customer } from '@/models';
  * Required Parameters:
  * - customerId: Extracted from URL path parameter
  * - token: Access token (typically Supabase access token) passed via query parameter `token`
- * - env_id: Environment ID passed via query parameter `env_id` (optional but recommended)
+ * - env_id: Environment ID passed via query parameter `env_id` (required)
  *
  * This page uses runtime credential override to set credentials dynamically,
  * allowing existing API classes to work in stateless contexts.
@@ -22,7 +22,7 @@ import { Customer } from '@/models';
 interface CustomerPortalProps {
 	customerId: string;
 	token: string;
-	envId: string | null;
+	envId: string;
 }
 
 const CustomerPortal = ({ customerId, token, envId }: CustomerPortalProps) => {
@@ -45,7 +45,7 @@ const CustomerPortal = ({ customerId, token, envId }: CustomerPortalProps) => {
 			// Use existing API classes - they now use runtime credentials
 			return await CustomerApi.getCustomerById(customerId);
 		},
-		enabled: !!customerId && !!token,
+		enabled: !!customerId && !!token && !!envId,
 		retry: 1,
 		staleTime: 0, // Always fetch fresh data for customer portal
 		gcTime: 0, // Don't cache data for customer portal

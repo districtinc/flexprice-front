@@ -1,19 +1,19 @@
 import { useParams, useSearchParams } from 'react-router';
-import { RefreshCw, Shield, User } from 'lucide-react';
+import { RefreshCw, Server, Shield, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/atoms/Button';
 import CustomerPortal from './CustomerPortal';
 
 /**
  * Wrapper component for CustomerPortal that extracts required parameters:
- * - customerId from URL path params
+ * - customerId from URL path params (required)
  * - token from query params (required)
- * - env_id from query params (optional)
+ * - env_id from query params (required)
  *
  * Handles validation and error cases with proper UI components:
  * - Missing customerId: shows error card with refresh option
  * - Missing token: shows authentication error card
- * - Missing env_id: allows request to proceed (env_id is optional, backend may handle default)
+ * - Missing env_id: shows environment error card
  */
 
 interface ErrorStateProps {
@@ -75,8 +75,20 @@ const CustomerPortalWrapper = () => {
 		);
 	}
 
+	if (!envId) {
+		return (
+			<ErrorState
+				icon={<Server className='h-8 w-8 text-red-500' />}
+				title='Environment ID Required'
+				description='Environment ID is missing from the URL. Please provide a valid environment ID in the query parameters to access this customer portal.'
+				actionLabel='Refresh Page'
+				onAction={() => window.location.reload()}
+			/>
+		);
+	}
+
 	// Pass extracted parameters to CustomerPortal
-	return <CustomerPortal customerId={customerId} token={token} envId={envId || null} />;
+	return <CustomerPortal customerId={customerId} token={token} envId={envId} />;
 };
 
 export default CustomerPortalWrapper;
