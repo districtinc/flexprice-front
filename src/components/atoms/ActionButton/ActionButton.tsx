@@ -22,6 +22,13 @@ interface ArchiveActionConfig {
 	icon?: React.ReactNode;
 }
 
+interface CustomAction {
+	text: string;
+	icon?: React.ReactNode;
+	onClick: () => void;
+	enabled?: boolean;
+}
+
 interface ActionProps {
 	id: string;
 	deleteMutationFn: (id: string) => Promise<void>;
@@ -30,6 +37,7 @@ interface ActionProps {
 	triggerIcon?: React.ReactNode;
 	edit?: EditActionConfig;
 	archive?: ArchiveActionConfig;
+	customActions?: CustomAction[];
 	disableToast?: boolean;
 	// Legacy props for backward compatibility
 	row?: unknown;
@@ -51,6 +59,7 @@ const ActionButton: FC<ActionProps> = ({
 	triggerIcon,
 	edit,
 	archive,
+	customActions,
 	disableToast = false,
 	// Legacy props
 	editPath,
@@ -145,6 +154,22 @@ const ActionButton: FC<ActionProps> = ({
 								{archiveConfig.icon || <EyeOff />}
 								<span>{archiveActionText}</span>
 							</DropdownMenuItem>
+						)}
+						{customActions?.map(
+							(action, index) =>
+								action.enabled !== false && (
+									<DropdownMenuItem
+										key={index}
+										onSelect={(event) => {
+											event.preventDefault();
+											setIsOpen(false);
+											action.onClick();
+										}}
+										className='flex gap-2 items-center w-full cursor-pointer'>
+										{action.icon}
+										<span>{action.text}</span>
+									</DropdownMenuItem>
+								),
 						)}
 					</DropdownMenuContent>
 				</DropdownMenu>

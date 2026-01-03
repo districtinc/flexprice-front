@@ -3,6 +3,20 @@ import EnvironmentApi from '@/api/EnvironmentApi';
 import AuthService from '@/core/auth/AuthService';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Runtime credential overrides for stateless pages
+let runtimeToken: string | null = null;
+let runtimeEnvId: string | null = null;
+
+export const setRuntimeCredentials = (token: string | null, envId: string | null) => {
+	runtimeToken = token;
+	runtimeEnvId = envId;
+};
+
+export const clearRuntimeCredentials = () => {
+	runtimeToken = null;
+	runtimeEnvId = null;
+};
+
 const axiosClient: AxiosInstance = axios.create({
 	baseURL: API_URL,
 	timeout: 10000,
@@ -13,9 +27,10 @@ const axiosClient: AxiosInstance = axios.create({
 
 axiosClient.interceptors.request.use(
 	async (config: InternalAxiosRequestConfig) => {
-		const token = await AuthService.getAcessToken();
-		// add active environment to the request
-		const activeEnvId = EnvironmentApi.getActiveEnvironmentId();
+		// Use runtime credentials if set, otherwise use services
+		const token = runtimeToken || (await AuthService.getAcessToken());
+		const activeEnvId = runtimeEnvId || EnvironmentApi.getActiveEnvironmentId();
+
 		if (activeEnvId) {
 			config.headers['X-Environment-ID'] = activeEnvId;
 		}
