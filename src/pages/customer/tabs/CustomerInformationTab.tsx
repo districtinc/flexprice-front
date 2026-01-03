@@ -5,13 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Country } from 'country-state-city';
 import { CreateCustomerDrawer, Detail, DetailsCard, MetadataModal, SaveCardModal } from '@/components/molecules';
 import { useParams, useOutletContext, Link } from 'react-router';
-import { Pencil, CreditCard, ExternalLink } from 'lucide-react';
+import { Pencil, CreditCard, ExternalLink, Share2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getTypographyClass } from '@/lib/typography';
 import { refetchQueries } from '@/core/services/tanstack/ReactQueryProvider';
 import { logger } from '@/utils/common/Logger';
 import { CONNECTION_PROVIDER_TYPE } from '@/models/Connection';
 import { RouteNames } from '@/core/routes/Routes';
+import { useCustomerPortalUrl } from '@/hooks/useCustomerPortalUrl';
 
 type ContextType = {
 	isArchived: boolean;
@@ -43,6 +44,9 @@ const CustomerInformationTab = () => {
 	const [customerDrawerOpen, setcustomerDrawerOpen] = useState(false);
 	const [showSaveCardModal, setShowSaveCardModal] = useState(false);
 	const [metadata, setMetadata] = useState<Record<string, string>>(filterStringMetadata(customer?.metadata));
+
+	// Use customer portal hook
+	const { copyToClipboard } = useCustomerPortalUrl(customerId);
 
 	// Check if Stripe connection is available
 	const hasStripeConnection =
@@ -141,16 +145,21 @@ const CustomerInformationTab = () => {
 								</Button>
 							)}
 							{!isArchived && (
-								<CreateCustomerDrawer
-									trigger={
-										<Button variant={'outline'} size={'icon'}>
-											<Pencil />
-										</Button>
-									}
-									open={customerDrawerOpen}
-									onOpenChange={setcustomerDrawerOpen}
-									data={customer}
-								/>
+								<>
+									<Button variant='outline' size='icon' onClick={copyToClipboard} title='Share Customer Portal Link'>
+										<Share2 className='size-4' />
+									</Button>
+									<CreateCustomerDrawer
+										trigger={
+											<Button variant={'outline'} size={'icon'}>
+												<Pencil />
+											</Button>
+										}
+										open={customerDrawerOpen}
+										onOpenChange={setcustomerDrawerOpen}
+										data={customer}
+									/>
+								</>
 							)}
 						</div>
 					</div>
