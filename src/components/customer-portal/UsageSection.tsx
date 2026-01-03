@@ -1,4 +1,4 @@
-import { Card, NoDataCard, Progress } from '@/components/atoms';
+import { Card, Progress } from '@/components/atoms';
 import { CustomerUsage } from '@/models';
 import { FEATURE_TYPE } from '@/models/Feature';
 import { formatAmount } from '@/components/atoms/Input/Input';
@@ -26,8 +26,9 @@ const UsageSection = ({ usageData, isLoading }: UsageSectionProps) => {
 	// Filter to only show metered features with usage
 	const meteredUsage = usageData?.filter((item) => item.feature?.type === FEATURE_TYPE.METERED) || [];
 
+	// Hide section if no usage data
 	if (meteredUsage.length === 0) {
-		return <NoDataCard title='Current Usage' subtitle='No usage data available for this billing period' />;
+		return null;
 	}
 
 	return (

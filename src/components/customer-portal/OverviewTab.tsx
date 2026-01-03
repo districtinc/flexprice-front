@@ -1,9 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import CustomerApi from '@/api/CustomerApi';
 import InvoiceApi from '@/api/InvoiceApi';
+import EventsApi from '@/api/EventsApi';
 import { Card } from '@/components/atoms';
+import { CustomerUsageChart } from '@/components/molecules';
+import { WindowSize } from '@/models';
+import { GetUsageAnalyticsRequest } from '@/types';
+import { cn } from '@/lib/utils';
 import BillingOverviewCard from './BillingOverviewCard';
 import SubscriptionsSection from './SubscriptionsSection';
 import UsageSection from './UsageSection';
@@ -11,6 +16,8 @@ import UsageSection from './UsageSection';
 interface OverviewTabProps {
 	customerId: string;
 }
+
+type TimePeriod = '1d' | '7d' | '30d';
 
 const OverviewSkeleton = () => (
 	<div className='space-y-6'>
@@ -36,11 +43,18 @@ const OverviewSkeleton = () => (
 			<div className='animate-pulse space-y-4'>
 				<div className='h-5 bg-zinc-100 rounded w-1/4'></div>
 				<div className='h-20 bg-zinc-100 rounded'></div>
-				<div className='h-20 bg-zinc-100 rounded'></div>
 			</div>
 		</Card>
 
-		{/* Usage Skeleton */}
+		{/* Usage Chart Skeleton */}
+		<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
+			<div className='animate-pulse'>
+				<div className='h-5 bg-zinc-100 rounded w-1/4 mb-4'></div>
+				<div className='h-48 bg-zinc-100 rounded'></div>
+			</div>
+		</Card>
+
+		{/* Usage Summary Skeleton */}
 		<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
 			<div className='animate-pulse space-y-4'>
 				<div className='h-5 bg-zinc-100 rounded w-1/4'></div>
@@ -54,6 +68,15 @@ const OverviewSkeleton = () => (
 );
 
 const OverviewTab = ({ customerId }: OverviewTabProps) => {
+	const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('30d');
+
+	// Fetch customer to get external_id for analytics
+	const { data: customer } = useQuery({
+		queryKey: ['portal-customer-overview', customerId],
+		queryFn: () => CustomerApi.getCustomerById(customerId),
+		enabled: !!customerId,
+	});
+
 	// Fetch subscriptions
 	const {
 		data: subscriptionsData,
@@ -87,6 +110,37 @@ const OverviewTab = ({ customerId }: OverviewTabProps) => {
 		enabled: !!customerId,
 	});
 
+	// Prepare analytics params based on selected period
+	const analyticsParams: GetUsageAnalyticsRequest | null = useMemo(() => {
+		if (!customer?.external_id) return null;
+
+		const endDate = new Date();
+		const startDate = new Date();
+
+		// Calculate days based on selected period
+		const daysMap: Record<TimePeriod, number> = {
+			'1d': 1,
+			'7d': 7,
+			'30d': 30,
+		};
+
+		startDate.setDate(startDate.getDate() - daysMap[selectedPeriod]);
+
+		return {
+			external_customer_id: customer.external_id,
+			window_size: WindowSize.DAY,
+			start_time: startDate.toISOString(),
+			end_time: endDate.toISOString(),
+		};
+	}, [customer?.external_id, selectedPeriod]);
+
+	// Fetch usage analytics for chart
+	const { data: analyticsData, isError: analyticsError } = useQuery({
+		queryKey: ['portal-analytics', customerId, analyticsParams],
+		queryFn: () => EventsApi.getUsageAnalytics(analyticsParams!),
+		enabled: !!analyticsParams,
+	});
+
 	// Handle errors with toast
 	useEffect(() => {
 		if (subscriptionsError) {
@@ -105,6 +159,12 @@ const OverviewTab = ({ customerId }: OverviewTabProps) => {
 			toast.error('Failed to load usage data');
 		}
 	}, [usageError]);
+
+	useEffect(() => {
+		if (analyticsError) {
+			toast.error('Failed to load usage analytics');
+		}
+	}, [analyticsError]);
 
 	const isLoading = subscriptionsLoading || invoicesLoading || usageLoading;
 
@@ -126,6 +186,29 @@ const OverviewTab = ({ customerId }: OverviewTabProps) => {
 
 			{/* Active Subscriptions */}
 			<SubscriptionsSection subscriptions={subscriptions} />
+
+			{/* Usage Analytics Chart */}
+			{analyticsData && (
+				<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
+					<div className='flex items-center justify-between mb-4'>
+						<h3 className='text-base font-medium text-zinc-950'>Usage Analytics</h3>
+						<div className='flex items-center gap-1 bg-zinc-50 rounded-lg p-1'>
+							{(['1d', '7d', '30d'] as TimePeriod[]).map((period) => (
+								<button
+									key={period}
+									onClick={() => setSelectedPeriod(period)}
+									className={cn(
+										'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+										selectedPeriod === period ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700',
+									)}>
+									{period}
+								</button>
+							))}
+						</div>
+					</div>
+					<CustomerUsageChart data={analyticsData} />
+				</Card>
+			)}
 
 			{/* Current Period Usage */}
 			<UsageSection usageData={usage} />

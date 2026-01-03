@@ -8,6 +8,36 @@ import CustomerApi from '@/api/CustomerApi';
 import { useNavigate } from 'react-router';
 import { RouteNames } from '@/core/routes/Routes';
 import { ENTITY_STATUS } from '@/models';
+import { ExternalLink } from 'lucide-react';
+import { useCustomerPortalUrl } from '@/hooks/useCustomerPortalUrl';
+
+const ActionButtonWithPortal: FC<{ customer: Customer; onEdit: (customer: Customer) => void }> = ({ customer, onEdit }) => {
+	const { openInNewTab } = useCustomerPortalUrl(customer.id);
+
+	return (
+		<ActionButton
+			id={customer.id}
+			deleteMutationFn={(id) => CustomerApi.deleteCustomerById(id)}
+			refetchQueryKey='fetchCustomers'
+			entityName='Customer'
+			edit={{
+				enabled: customer.status === ENTITY_STATUS.PUBLISHED,
+				path: `/billing/customers/edit-customer?id=${customer.id}`,
+				onClick: () => onEdit(customer),
+			}}
+			archive={{
+				enabled: customer.status === ENTITY_STATUS.PUBLISHED,
+			}}
+			customActions={[
+				{
+					text: 'Open Customer Portal',
+					icon: <ExternalLink className='h-4 w-4' />,
+					onClick: openInNewTab,
+				},
+			]}
+		/>
+	);
+};
 
 export interface Props {
 	data: Customer[];
@@ -39,22 +69,7 @@ const CustomerTable: FC<Props> = ({ data, onEdit }) => {
 		{
 			title: '',
 			fieldVariant: 'interactive',
-			render: (row) => (
-				<ActionButton
-					id={row.id}
-					deleteMutationFn={(id) => CustomerApi.deleteCustomerById(id)}
-					refetchQueryKey='fetchCustomers'
-					entityName='Customer'
-					edit={{
-						enabled: row.status === ENTITY_STATUS.PUBLISHED,
-						path: `/billing/customers/edit-customer?id=${row.id}`,
-						onClick: () => onEdit(row),
-					}}
-					archive={{
-						enabled: row.status === ENTITY_STATUS.PUBLISHED,
-					}}
-				/>
-			),
+			render: (row) => <ActionButtonWithPortal customer={row} onEdit={onEdit} />,
 		},
 	];
 

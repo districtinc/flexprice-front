@@ -30,10 +30,14 @@ interface CustomerPortalProps {
 	envId: string;
 }
 
-type TabId = 'overview' | 'invoices' | 'wallet';
+enum PortalTab {
+	OVERVIEW = 'overview',
+	CREDITS = 'credits',
+	INVOICES = 'invoices',
+}
 
 const CustomerPortal = ({ customerId, token, envId }: CustomerPortalProps) => {
-	const [activeTab, setActiveTab] = useState<TabId>('overview');
+	const [activeTab, setActiveTab] = useState<PortalTab>(PortalTab.OVERVIEW);
 
 	useEffect(() => {
 		// Set runtime credentials for this session
@@ -97,10 +101,10 @@ const CustomerPortal = ({ customerId, token, envId }: CustomerPortalProps) => {
 
 	const hasWallets = wallets && wallets.length > 0;
 
-	const tabs: { id: TabId; label: string; show: boolean }[] = [
-		{ id: 'overview', label: 'Overview', show: true },
-		{ id: 'invoices', label: 'Invoices', show: true },
-		{ id: 'wallet', label: 'Wallet', show: hasWallets || false },
+	const tabs: { id: PortalTab; label: string; show: boolean }[] = [
+		{ id: PortalTab.OVERVIEW, label: 'Overview', show: true },
+		{ id: PortalTab.CREDITS, label: 'Credits', show: hasWallets || false },
+		{ id: PortalTab.INVOICES, label: 'Invoices', show: true },
 	];
 
 	const visibleTabs = tabs.filter((tab) => tab.show);
@@ -135,9 +139,9 @@ const CustomerPortal = ({ customerId, token, envId }: CustomerPortalProps) => {
 
 				{/* Tab Content */}
 				<div>
-					{activeTab === 'overview' && <OverviewTab customerId={customerId} />}
-					{activeTab === 'invoices' && <InvoicesTab customerId={customerId} />}
-					{activeTab === 'wallet' && hasWallets && <WalletTab customerId={customerId} />}
+					{activeTab === PortalTab.OVERVIEW && <OverviewTab customerId={customerId} />}
+					{activeTab === PortalTab.CREDITS && hasWallets && <WalletTab customerId={customerId} />}
+					{activeTab === PortalTab.INVOICES && <InvoicesTab customerId={customerId} />}
 				</div>
 
 				{/* Footer */}
