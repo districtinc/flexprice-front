@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import CustomerApi from '@/api/CustomerApi';
-import InvoiceApi from '@/api/InvoiceApi';
 import EventsApi from '@/api/EventsApi';
+import WalletApi from '@/api/WalletApi';
 import { Card } from '@/components/atoms';
 import { CustomerUsageChart } from '@/components/molecules';
 import { WindowSize } from '@/models';
+import { WALLET_STATUS } from '@/models/Wallet';
 import { GetUsageAnalyticsRequest } from '@/types';
 import { cn } from '@/lib/utils';
-import BillingOverviewCard from './BillingOverviewCard';
+import { formatAmount } from '@/components/atoms/Input/Input';
+import { getCurrencySymbol } from '@/utils/common/helper_functions';
+import { Wallet as WalletIcon } from 'lucide-react';
 import SubscriptionsSection from './SubscriptionsSection';
 import UsageSection from './UsageSection';
 
@@ -21,23 +24,6 @@ type TimePeriod = '1d' | '7d' | '30d';
 
 const OverviewSkeleton = () => (
 	<div className='space-y-6'>
-		{/* Billing Overview Skeleton */}
-		<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
-			<div className='animate-pulse'>
-				<div className='h-5 bg-zinc-100 rounded w-1/4 mb-6'></div>
-				<div className='grid grid-cols-2 gap-6'>
-					<div>
-						<div className='h-4 bg-zinc-100 rounded w-1/3 mb-2'></div>
-						<div className='h-8 bg-zinc-100 rounded w-2/3'></div>
-					</div>
-					<div>
-						<div className='h-4 bg-zinc-100 rounded w-1/3 mb-2'></div>
-						<div className='h-8 bg-zinc-100 rounded w-2/3'></div>
-					</div>
-				</div>
-			</div>
-		</Card>
-
 		{/* Subscriptions Skeleton */}
 		<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
 			<div className='animate-pulse space-y-4'>
@@ -46,22 +32,19 @@ const OverviewSkeleton = () => (
 			</div>
 		</Card>
 
+		{/* Wallet Balance Skeleton */}
+		<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
+			<div className='animate-pulse'>
+				<div className='h-10 bg-zinc-100 rounded w-1/3 mb-6'></div>
+				<div className='h-10 bg-zinc-100 rounded w-1/4'></div>
+			</div>
+		</Card>
+
 		{/* Usage Chart Skeleton */}
 		<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
 			<div className='animate-pulse'>
 				<div className='h-5 bg-zinc-100 rounded w-1/4 mb-4'></div>
 				<div className='h-48 bg-zinc-100 rounded'></div>
-			</div>
-		</Card>
-
-		{/* Usage Summary Skeleton */}
-		<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
-			<div className='animate-pulse space-y-4'>
-				<div className='h-5 bg-zinc-100 rounded w-1/4'></div>
-				<div className='space-y-3'>
-					<div className='h-12 bg-zinc-100 rounded'></div>
-					<div className='h-12 bg-zinc-100 rounded'></div>
-				</div>
 			</div>
 		</Card>
 	</div>
@@ -88,15 +71,25 @@ const OverviewTab = ({ customerId }: OverviewTabProps) => {
 		enabled: !!customerId,
 	});
 
-	// Fetch invoices for billing overview
+	// Fetch wallets
 	const {
-		data: invoicesData,
-		isLoading: invoicesLoading,
-		isError: invoicesError,
+		data: wallets,
+		isLoading: walletsLoading,
+		isError: walletsError,
 	} = useQuery({
-		queryKey: ['portal-invoices', customerId],
-		queryFn: () => InvoiceApi.getCustomerInvoices(customerId),
+		queryKey: ['portal-wallets', customerId],
+		queryFn: () => WalletApi.getCustomerWallets({ id: customerId }),
 		enabled: !!customerId,
+	});
+
+	// Get first wallet (prefer active, otherwise first available)
+	const firstWallet = wallets?.find((w) => w.wallet_status === WALLET_STATUS.ACTIVE) || wallets?.[0];
+
+	// Fetch wallet balance for first wallet
+	const { data: walletBalance, isLoading: balanceLoading } = useQuery({
+		queryKey: ['portal-wallet-balance', firstWallet?.id],
+		queryFn: () => WalletApi.getWalletBalance(firstWallet!.id),
+		enabled: !!firstWallet?.id,
 	});
 
 	// Fetch usage summary
@@ -149,12 +142,6 @@ const OverviewTab = ({ customerId }: OverviewTabProps) => {
 	}, [subscriptionsError]);
 
 	useEffect(() => {
-		if (invoicesError) {
-			toast.error('Failed to load billing overview');
-		}
-	}, [invoicesError]);
-
-	useEffect(() => {
 		if (usageError) {
 			toast.error('Failed to load usage data');
 		}
@@ -166,23 +153,58 @@ const OverviewTab = ({ customerId }: OverviewTabProps) => {
 		}
 	}, [analyticsError]);
 
-	const isLoading = subscriptionsLoading || invoicesLoading || usageLoading;
+	useEffect(() => {
+		if (walletsError) {
+			toast.error('Failed to load wallet');
+		}
+	}, [walletsError]);
+
+	const isLoading = subscriptionsLoading || walletsLoading || usageLoading;
 
 	if (isLoading) {
 		return <OverviewSkeleton />;
 	}
 
 	const subscriptions = subscriptionsData?.items || [];
-	const invoices = invoicesData?.items || [];
 	const usage = usageData?.features || [];
-
-	// Get currency from first invoice or subscription
-	const currency = invoices[0]?.currency || subscriptions[0]?.currency || 'USD';
+	const currencySymbol = getCurrencySymbol(walletBalance?.currency ?? firstWallet?.currency ?? 'USD');
 
 	return (
 		<div className='space-y-6'>
-			{/* Billing Overview */}
-			<BillingOverviewCard invoices={invoices} currency={currency} />
+			{/* Wallet Balance */}
+			{firstWallet && (
+				<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
+					<div className='flex items-center gap-3 mb-6'>
+						<div className='h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center'>
+							<WalletIcon className='h-5 w-5 text-blue-600' />
+						</div>
+						<div>
+							<h3 className='text-base font-medium text-zinc-950'>{firstWallet.name || 'Wallet'}</h3>
+						</div>
+					</div>
+
+					{/* Balance */}
+					<div>
+						<span className='text-sm text-zinc-500 block mb-2'>Balance</span>
+						{balanceLoading ? (
+							<div className='h-10 w-32 bg-zinc-100 animate-pulse rounded'></div>
+						) : (
+							<>
+								<div className='flex items-baseline gap-2'>
+									<span className='text-4xl font-semibold text-zinc-950'>
+										{formatAmount(walletBalance?.real_time_credit_balance?.toString() ?? '0')}
+									</span>
+									<span className='text-base font-normal text-zinc-500'>credits</span>
+								</div>
+								<p className='text-sm text-zinc-500 mt-1'>
+									{currencySymbol}
+									{formatAmount(walletBalance?.real_time_balance?.toString() ?? '0')} value
+								</p>
+							</>
+						)}
+					</div>
+				</Card>
+			)}
 
 			{/* Active Subscriptions */}
 			<SubscriptionsSection subscriptions={subscriptions} />
@@ -191,7 +213,7 @@ const OverviewTab = ({ customerId }: OverviewTabProps) => {
 			{analyticsData && (
 				<Card className='bg-white border border-[#E9E9E9] rounded-xl p-6'>
 					<div className='flex items-center justify-between mb-4'>
-						<h3 className='text-base font-medium text-zinc-950'>Usage Analytics</h3>
+						<h3 className='text-base font-medium text-zinc-950'>Usage</h3>
 						<div className='flex items-center gap-1 bg-zinc-50 rounded-lg p-1'>
 							{(['1d', '7d', '30d'] as TimePeriod[]).map((period) => (
 								<button

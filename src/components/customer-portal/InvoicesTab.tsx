@@ -7,9 +7,8 @@ import { Invoice, INVOICE_STATUS } from '@/models/Invoice';
 import { PAYMENT_STATUS } from '@/constants/payment';
 import { formatDateShort, getCurrencySymbol } from '@/utils/common/helper_functions';
 import { formatAmount } from '@/components/atoms/Input/Input';
-import { Download, Search, Info } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { Input } from '@/components/ui';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
 import EmptyState from './EmptyState';
 
 interface InvoicesTabProps {
@@ -103,18 +102,18 @@ const InvoicesTab = ({ customerId }: InvoicesTabProps) => {
 	});
 
 	// Calculate totals for finalized invoices
-	const totalInvoiced = invoices
-		.filter((inv) => inv.invoice_status === INVOICE_STATUS.FINALIZED)
-		.reduce((sum, inv) => sum + (inv.total || 0), 0);
+	// const totalInvoiced = invoices
+	// 	.filter((inv) => inv.invoice_status === INVOICE_STATUS.FINALIZED)
+	// 	.reduce((sum, inv) => sum + (inv.total || 0), 0);
 
-	const totalOverdue = invoices
-		.filter(
-			(inv) =>
-				inv.invoice_status === INVOICE_STATUS.FINALIZED &&
-				inv.payment_status !== PAYMENT_STATUS.SUCCEEDED &&
-				new Date(inv.due_date) < new Date(),
-		)
-		.reduce((sum, inv) => sum + (inv.amount_remaining || 0), 0);
+	// const totalOverdue = invoices
+	// 	.filter(
+	// 		(inv) =>
+	// 			inv.invoice_status === INVOICE_STATUS.FINALIZED &&
+	// 			inv.payment_status !== PAYMENT_STATUS.SUCCEEDED &&
+	// 			new Date(inv.due_date) < new Date(),
+	// 	)
+	// 	.reduce((sum, inv) => sum + (inv.amount_remaining || 0), 0);
 
 	const currency = invoices[0]?.currency || 'USD';
 	const currencySymbol = getCurrencySymbol(currency);
@@ -139,7 +138,7 @@ const InvoicesTab = ({ customerId }: InvoicesTabProps) => {
 	return (
 		<div className='space-y-6'>
 			{/* Summary Cards */}
-			<div className='grid grid-cols-2 gap-4'>
+			{/* <div className='grid grid-cols-2 gap-4'>
 				<Card className='bg-white border border-[#E9E9E9] rounded-xl p-4'>
 					<span className='text-sm text-zinc-500'>Total invoiced</span>
 					<p className='text-xl font-semibold text-zinc-950 mt-1'>
@@ -166,7 +165,7 @@ const InvoicesTab = ({ customerId }: InvoicesTabProps) => {
 						{formatAmount(String(totalOverdue))}
 					</p>
 				</Card>
-			</div>
+			</div> */}
 
 			{/* Search */}
 			<div className='relative'>
