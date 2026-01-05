@@ -1,8 +1,24 @@
 import { Price, PRICE_UNIT_TYPE } from '@/models/Price';
-import { BILLING_MODEL, PRICE_TYPE } from '@/models/Price';
+import { BILLING_MODEL, PRICE_TYPE, TIER_MODE, CreatePriceTier, TransformQuantity } from '@/models/Price';
 import { PriceUnit } from '@/models/PriceUnit';
 import { getCurrencySymbol } from './helper_functions';
 import { formatAmount } from '@/components/atoms/Input/Input';
+import { ExtendedPriceOverride } from './price_override_helpers';
+
+/**
+ * Normalized price structure - single source of truth for price display
+ * This interface represents price data in a consistent format regardless of
+ * whether it's FIAT or CUSTOM price unit type
+ */
+export interface NormalizedPriceDisplay {
+	amount: string; // The amount to display
+	symbol: string; // Currency/unit symbol to display
+	tiers: CreatePriceTier[] | null; // Pricing tiers (null if not tiered)
+	billingModel: BILLING_MODEL | 'SLAB_TIERED'; // Billing model
+	tierMode: TIER_MODE; // Tier mode (VOLUME or SLAB)
+	transformQuantity: TransformQuantity | null; // Transform quantity for package billing
+	priceUnitType: PRICE_UNIT_TYPE; // FIAT or CUSTOM
+}
 
 // Helper to get the appropriate symbol for display
 const getDisplaySymbol = (price: Price & { pricing_unit?: PriceUnit }): string => {
@@ -35,6 +51,142 @@ const getDisplayTiers = (price: Price) => {
 		return price.price_unit_tiers || null;
 	}
 	return price.tiers;
+};
+
+/**
+ * Normalize a price with optional overrides into a standard format
+ * This is the single transformation point for all price display logic
+ *
+ * @param price - The original price object (may include pricing_unit from API response)
+ * @param override - Optional price override configuration
+ * @returns NormalizedPriceDisplay - Consistent format for display regardless of price unit type
+ */
+export const normalizePriceDisplay = (
+	price: Price & { pricing_unit?: PriceUnit },
+	override?: ExtendedPriceOverride,
+): NormalizedPriceDisplay => {
+	const isCustomPriceUnit = price.price_unit_type === PRICE_UNIT_TYPE.CUSTOM;
+
+	// Step 1: Extract symbol with correct priority
+	// Priority: pricing_unit.symbol > price_unit_config.price_unit > price.price_unit > currency symbol
+	let symbol: string;
+	if (isCustomPriceUnit) {
+		if (price.pricing_unit?.symbol) {
+			symbol = price.pricing_unit.symbol;
+		} else if (price.price_unit_config?.price_unit) {
+			symbol = price.price_unit_config.price_unit;
+		} else if (price.price_unit) {
+			symbol = price.price_unit;
+		} else {
+			symbol = getCurrencySymbol(price.currency);
+		}
+	} else {
+		symbol = getCurrencySymbol(price.currency);
+	}
+
+	// Step 2: Extract amount based on price unit type and overrides
+	let amount: string;
+	if (isCustomPriceUnit) {
+		// For CUSTOM: override.price_unit_amount > price.price_unit_amount > price_unit_config.amount > price.amount
+		amount = override?.price_unit_amount || price.price_unit_amount || price.price_unit_config?.amount || price.amount || '0';
+	} else {
+		// For FIAT: override.amount > price.amount
+		amount = override?.amount || price.amount || '0';
+	}
+
+	// Step 3: Extract tiers based on price unit type and overrides
+	let tiers: CreatePriceTier[] | null;
+	if (isCustomPriceUnit) {
+		// For CUSTOM: override.price_unit_tiers > price.price_unit_tiers
+		tiers = (override?.price_unit_tiers || price.price_unit_tiers || null) as CreatePriceTier[] | null;
+	} else {
+		// For FIAT: override.tiers > price.tiers
+		tiers = (override?.tiers || price.tiers || null) as CreatePriceTier[] | null;
+	}
+
+	// Step 4: Extract billing model and tier mode
+	const billingModel: BILLING_MODEL | 'SLAB_TIERED' = override?.billing_model || price.billing_model;
+	let tierMode: TIER_MODE = override?.tier_mode || price.tier_mode;
+
+	// Step 5: Handle SLAB_TIERED special case
+	// SLAB_TIERED is a frontend convenience representation for TIERED + SLAB mode
+	if (billingModel === 'SLAB_TIERED') {
+		tierMode = TIER_MODE.SLAB;
+	}
+
+	// Step 6: Extract transform quantity
+	const transformQuantity = override?.transform_quantity || price.transform_quantity || null;
+
+	return {
+		amount,
+		symbol,
+		tiers,
+		billingModel,
+		tierMode,
+		transformQuantity,
+		priceUnitType: price.price_unit_type,
+	};
+};
+
+/**
+ * Format price display based on normalized data and billing model
+ *
+ * @param normalized - The normalized price display data
+ * @returns Formatted price string for display
+ */
+export const formatPriceDisplay = (normalized: NormalizedPriceDisplay): string => {
+	const { amount, symbol, billingModel, transformQuantity, tiers } = normalized;
+
+	switch (billingModel) {
+		case BILLING_MODEL.FLAT_FEE:
+			return `${symbol}${formatAmount(amount)}`;
+
+		case BILLING_MODEL.PACKAGE: {
+			const divideBy = transformQuantity?.divide_by || 1;
+			return `${symbol}${formatAmount(amount)} / ${divideBy} units`;
+		}
+
+		case BILLING_MODEL.TIERED:
+		case 'SLAB_TIERED': {
+			const firstTier = tiers?.[0];
+			return `starts at ${symbol}${formatAmount(firstTier?.unit_amount || '0')} per unit`;
+		}
+
+		default:
+			return `${symbol}${formatAmount(amount)}`;
+	}
+};
+
+/**
+ * Get human-readable label for billing model
+ */
+export const getBillingModelLabel = (model: BILLING_MODEL | 'SLAB_TIERED'): string => {
+	switch (model) {
+		case BILLING_MODEL.FLAT_FEE:
+			return 'Flat Fee';
+		case BILLING_MODEL.PACKAGE:
+			return 'Package';
+		case BILLING_MODEL.TIERED:
+			return 'Volume Tiered';
+		case 'SLAB_TIERED':
+			return 'Slab Tiered';
+		default:
+			return model;
+	}
+};
+
+/**
+ * Get human-readable label for tier mode
+ */
+export const getTierModeLabel = (mode: TIER_MODE): string => {
+	switch (mode) {
+		case TIER_MODE.VOLUME:
+			return 'Volume';
+		case TIER_MODE.SLAB:
+			return 'Slab';
+		default:
+			return mode;
+	}
 };
 
 export const getPriceTableCharge = (price: Price & { pricing_unit?: PriceUnit }, normalizedPrice: boolean = true) => {
