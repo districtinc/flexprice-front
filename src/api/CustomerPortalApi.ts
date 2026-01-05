@@ -1,5 +1,5 @@
 import { AxiosClient } from '@/core/axios/verbs';
-import { Customer, Invoice } from '@/models';
+import { Customer, Invoice, RealtimeWalletBalance } from '@/models';
 import { UpdateCustomerRequest, GetUsageSummaryResponse } from '@/types/dto';
 import {
 	GetCustomerUsageSummaryRequest,
@@ -9,7 +9,7 @@ import {
 } from '@/types';
 import { SubscriptionResponse, ListSubscriptionsResponse } from '@/types/dto/Subscription';
 import { GetInvoicesResponse } from '@/types/dto/InvoiceApi';
-import { WalletResponse } from '@/types/dto/Wallet';
+import { WalletResponse, WalletTransactionResponse } from '@/types/dto/Wallet';
 import { GetUsageAnalyticsResponse } from '@/types/dto/Events';
 import { GetDetailedCostAnalyticsResponse } from '@/types/dto/Cost';
 import { generateQueryParams } from '@/utils/common/api_helper';
@@ -19,7 +19,7 @@ import { generateQueryParams } from '@/utils/common/api_helper';
  * All methods require dashboard token authentication (set via setRuntimeCredentials)
  */
 class CustomerPortalApi {
-	private static baseUrl = '/v1/customer-dashboard';
+	private static baseUrl = '/customer-dashboard';
 
 	/**
 	 * Get the authenticated customer's information
@@ -97,6 +97,36 @@ class CustomerPortalApi {
 	 */
 	public static async getCostAnalytics(payload: DashboardCostAnalyticsRequest): Promise<GetDetailedCostAnalyticsResponse> {
 		return await AxiosClient.post<GetDetailedCostAnalyticsResponse>(`${this.baseUrl}/cost-analytics`, payload);
+	}
+
+	/**
+	 * Get a presigned URL for downloading an invoice PDF for the authenticated customer
+	 */
+	public static async downloadInvoicePdf(invoiceId: string): Promise<void> {
+		const url = generateQueryParams(`${this.baseUrl}/invoices/${invoiceId}/pdf`, { url: true });
+		const response = await AxiosClient.get<{ presigned_url: string }>(url);
+		const presignedUrl = response.presigned_url;
+		window.open(presignedUrl, '_blank');
+	}
+
+	/**
+	 * Get real-time balance for a wallet belonging to the authenticated customer
+	 */
+	public static async getWalletBalance(walletId: string): Promise<RealtimeWalletBalance> {
+		return await AxiosClient.get<RealtimeWalletBalance>(`${this.baseUrl}/wallets/${walletId}/balance`);
+	}
+
+	/**
+	 * Get transactions for a wallet belonging to the authenticated customer with pagination
+	 */
+	public static async getWalletTransactions(payload: {
+		walletId: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<WalletTransactionResponse> {
+		const { walletId, limit = 10, offset = 0 } = payload;
+		const url = generateQueryParams(`${this.baseUrl}/wallets/${walletId}/transactions`, { limit, offset });
+		return await AxiosClient.get<WalletTransactionResponse>(url);
 	}
 }
 
