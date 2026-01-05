@@ -19,7 +19,7 @@ import { generateQueryParams } from '@/utils/common/api_helper';
  * All methods require dashboard token authentication (set via setRuntimeCredentials)
  */
 class CustomerPortalApi {
-	private static baseUrl = '/customer-dashboard';
+	private static baseUrl = '/customer/portal';
 
 	/**
 	 * Get the authenticated customer's information
@@ -89,14 +89,14 @@ class CustomerPortalApi {
 	 * Get usage analytics for the authenticated customer
 	 */
 	public static async getAnalytics(payload: DashboardAnalyticsRequest): Promise<GetUsageAnalyticsResponse> {
-		return await AxiosClient.post<GetUsageAnalyticsResponse>(`${this.baseUrl}/analytics`, payload);
+		return await AxiosClient.post<GetUsageAnalyticsResponse>(`${this.baseUrl}/analytics/revenue`, payload);
 	}
 
 	/**
 	 * Get cost analytics for the authenticated customer
 	 */
 	public static async getCostAnalytics(payload: DashboardCostAnalyticsRequest): Promise<GetDetailedCostAnalyticsResponse> {
-		return await AxiosClient.post<GetDetailedCostAnalyticsResponse>(`${this.baseUrl}/cost-analytics`, payload);
+		return await AxiosClient.post<GetDetailedCostAnalyticsResponse>(`${this.baseUrl}/analytics/cost`, payload);
 	}
 
 	/**
@@ -113,7 +113,7 @@ class CustomerPortalApi {
 	 * Get real-time balance for a wallet belonging to the authenticated customer
 	 */
 	public static async getWalletBalance(walletId: string): Promise<RealtimeWalletBalance> {
-		return await AxiosClient.get<RealtimeWalletBalance>(`${this.baseUrl}/wallets/${walletId}/balance`);
+		return await AxiosClient.get<RealtimeWalletBalance>(`${this.baseUrl}/wallets/${walletId}`);
 	}
 
 	/**
