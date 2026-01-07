@@ -94,6 +94,18 @@ jobs:
             echo "ℹ️ No changes needed to .github/workflows"
           fi
 
+          echo "Checking if there are any differences with main..."
+          git fetch origin main
+          COMMIT_DIFF=$(git rev-list --count origin/main..$BRANCH_NAME)
+
+          if [ "$COMMIT_DIFF" -eq "0" ]; then
+            echo "⚠️ No new commits to merge. The version $LATEST_VERSION is already in main."
+            echo "Skipping PR creation."
+            exit 0
+          fi
+
+          echo "Found $COMMIT_DIFF new commit(s). Proceeding with PR creation..."
+
           echo "Pushing branch to origin (force push to overwrite if exists)..."
           git push -u origin $BRANCH_NAME --force
 
